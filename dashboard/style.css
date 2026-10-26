@@ -574,6 +574,130 @@ h1 {
 
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* the 16-column daily table scrolls inside its own container instead of
+   squeezing columns into a 249px phone viewport */
+#daily-table-wrap {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+#daily-table {
+  min-width: 760px;
+}
+
+#daily-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-soft);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* compact mode: date / sleep / HRV / resting HR / steps */
+#daily-table.compact th:nth-child(3),
+#daily-table.compact td:nth-child(3),
+#daily-table.compact th:nth-child(4),
+#daily-table.compact td:nth-child(4),
+#daily-table.compact th:nth-child(5),
+#daily-table.compact td:nth-child(5),
+#daily-table.compact th:nth-child(6),
+#daily-table.compact td:nth-child(6),
+#daily-table.compact th:nth-child(7),
+#daily-table.compact td:nth-child(7),
+#daily-table.compact th:nth-child(9),
+#daily-table.compact td:nth-child(9),
+#daily-table.compact th:nth-child(10),
+#daily-table.compact td:nth-child(10),
+#daily-table.compact th:nth-child(12),
+#daily-table.compact td:nth-child(12),
+#daily-table.compact th:nth-child(14),
+#daily-table.compact td:nth-child(14),
+#daily-table.compact th:nth-child(15),
+#daily-table.compact td:nth-child(15),
+#daily-table.compact th:nth-child(16),
+#daily-table.compact td:nth-child(16) {
+  display: none;
+}
+
+#daily-table.compact {
+  min-width: 0;
+}
+
+.scroll-hint {
+  display: none;
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+/* JS flips data-visible only when the table actually scrolls horizontally */
+.scroll-hint[data-visible='true'] {
+  display: block;
+}
+
+.load-more {
+  margin-top: 0.6rem;
+}
+
+.kpi.skeleton {
+  min-height: 132px;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.07) 38%,
+    rgba(255, 255, 255, 0.03) 56%
+  );
+  background-size: 200% 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+  border: 1px solid var(--border);
+}
+
+@keyframes skeleton {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+.back-to-top {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.2rem;
+  z-index: 60;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(13, 19, 26, 0.92);
+  color: var(--accent);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.back-to-top:hover,
+.back-to-top:focus-visible {
+  border-color: var(--accent);
+  color: #041016;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi.skeleton {
+    animation: none;
+  }
+  #back-to-top {
+    scroll-behavior: auto;
+  }
 }
 
 .coverage,
@@ -681,6 +805,66 @@ h1 {
   }
 }
 
+/* ---------------------------------------------------------------- mobile */
+/* touch sizing also applies to tablets and any coarse-pointer device */
+@media (max-width: 900px), (pointer: coarse) {
+  .range button,
+  .tool,
+  select {
+    min-height: 44px;
+  }
+
+  .hcell {
+    touch-action: manipulation;
+  }
+
+  .back-to-top {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 767px) {
+  .range {
+    gap: 0.5rem;
+  }
+
+  .range button {
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .tool {
+    padding: 0.5rem 0.8rem;
+  }
+
+  /* heatmap: one month per row, cells scale with the screen instead of 18px */
+  .hmonth {
+    min-width: 100%;
+  }
+
+  .hgrid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .hcell {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+  }
+
+  .back-to-top {
+    right: 0.75rem;
+    bottom: 0.9rem;
+  }
+}
+
 @media (max-width: 560px) {
   .header-inner {
     align-items: flex-start;
@@ -693,16 +877,5 @@ h1 {
 
   .chart-box {
     height: 220px;
-  }
-
-  .hgrid {
-    grid-template-columns: repeat(7, 18px);
-  }
-
-  .hcell {
-    width: 18px;
-    height: 18px;
-    line-height: 16px;
-    font-size: 0.5rem;
   }
 }

@@ -118,6 +118,9 @@ const state = {
   corrLag: 1,
   heat: 'sleep_total_min',
   dailyExpanded: false,
+  // rows rendered in the daily table: 30 initially, +200 per "load more".
+  // Keeps DOM small on phones even when "全部" (1000+) is selected.
+  dailyLimit: 30,
   data: null,
   quality: null,
   rangeRows: [],
@@ -236,7 +239,9 @@ const buildKpis = () => {
         }
       </article>`;
   });
-  document.getElementById('kpis').innerHTML = cards.join('');
+  const box = document.getElementById('kpis');
+  box.innerHTML = cards.join('');
+  box.removeAttribute('aria-busy');
 };
 
 // ------------------------------------------------------------------ charts
@@ -886,9 +891,9 @@ const DAILY_COLS = [
 ];
 
 const renderDailyTable = () => {
-  const wrap = document.getElementById('daily-table-wrap');
-  const limit = state.dailyExpanded ? null : 30;
-  const rows = limit ? state.rangeRows.slice(0, limit) : state.rangeRows;
+  const limit = state.dailyExpanded ? state.rangeRows.length : state.dailyLimit;
+  const rows = state.rangeRows.slice(0, limit);
+  const more = state.rangeRows.length - rows.length;
 
   // scrape HRV deviation from series for display
   const allIdx = (r) => state.data.daily.indexOf(r);
@@ -916,7 +921,38 @@ const renderDailyTable = () => {
         })
         .join('')}
     </tbody>
-    <caption>${limit ? `显示 ${rows.length}/${state.rangeRows.length} 行（当前范围）` : `全部 ${rows.length} 行`}；“缺”=该睡眠分期当日缺失（非 0）。HRVΔ=相对 28 天个人基线差。</caption>`;
+    <caption>${rows.length}/${state.rangeRows.length} 行（当前范围）；“缺”=该睡眠分期当日缺失（非 0）。HRVΔ=相对 28 天个人基线差。</caption>`;
+
+  // "load more" button lives outside the table so it never scrolls sideways
+  const wrap = document.getElementById('daily-table-wrap');
+  let btn = document.getElementById('daily-more');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'daily-more';
+    btn.className = 'tool load-more';
+    wrap.after(btn);
+  }
+  if (more > 0 && !state.dailyExpanded) {
+    btn.hidden = false;
+    btn.textContent = `再显示 ${Math.min(200, more)} 行（还有 ${more}）`;
+    btn.onclick = () => {
+      state.dailyLimit += 200;
+      renderDailyTable();
+    };
+  } else {
+    btn.hidden = true;
+  }
+
+  // horizontal-scroll hint only when the table really overflows its container
+  updateScrollHint();
+};
+
+const updateScrollHint = () => {
+  const hint = document.getElementById('scroll-hint');
+  const wrap = document.getElementById('daily-table-wrap');
+  if (!hint || !wrap) return;
+  hint.dataset.visible = String(wrap.scrollWidth > wrap.clientWidth + 2);
 };
 
 const exportCsv = () => {
@@ -1063,6 +1099,14 @@ const wireTables = () => {
 
 const applyRange = (n) => {
   state.range = n;
+  // switching range resets the progressive table back to the first page
+  state.dailyLimit = 30;
+  state.dailyExpanded = false;
+  const toggle = document.getElementById('toggle-daily');
+  if (toggle) {
+    toggle.textContent = '展开全部';
+    toggle.setAttribute('aria-expanded', 'false');
+  }
   document.querySelectorAll('#range button').forEach((b) => {
     const active = Number(b.dataset.range) === n;
     b.classList.toggle('active', active);
@@ -1149,9 +1193,39 @@ const init = async () => {
 
   document.getElementById('toggle-daily').addEventListener('click', (e) => {
     state.dailyExpanded = !state.dailyExpanded;
+    state.dailyLimit = state.dailyExpanded ? state.rangeRows.length : 30;
     e.currentTarget.textContent = state.dailyExpanded ? '收起' : '展开全部';
     e.currentTarget.setAttribute('aria-expanded', String(state.dailyExpanded));
     renderDailyTable();
+  });
+
+  document.getElementById('toggle-compact').addEventListener('click', (e) => {
+    const table = document.getElementById('daily-table');
+    const on = !table.classList.contains('compact');
+    table.classList.toggle('compact', on);
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    updateScrollHint();
+  });
+
+  window.addEventListener(
+    'resize',
+    () => {
+      clearTimeout(state._hintTimer);
+      state._hintTimer = setTimeout(updateScrollHint, 150);
+    },
+    { passive: true }
+  );
+
+  // back-to-top: appears after one screen of scrolling
+  const toTop = document.getElementById('back-to-top');
+  const onScroll = () => {
+    toTop.hidden = window.scrollY < window.innerHeight * 0.8;
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  toTop.addEventListener('click', () => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
   });
 
   document.getElementById('export-csv').addEventListener('click', exportCsv);
@@ -1173,6 +1247,14 @@ const init = async () => {
 
   wireTables();
   applyRange(90);
+
+  // phones start with the compact daily table (5 core columns)
+  if (window.matchMedia('(max-width: 767px)').matches) {
+    document.getElementById('daily-table').classList.add('compact');
+    const compactBtn = document.getElementById('toggle-compact');
+    compactBtn.setAttribute('aria-pressed', 'true');
+    updateScrollHint();
+  }
 
   window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
     for (const ch of Object.values(charts)) ch.destroy();

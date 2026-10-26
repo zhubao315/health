@@ -66,7 +66,12 @@
           <h2 id="kpi-title">目前状态</h2>
           <span class="hint">各卡片标注自己的数据日期；与个人基线比较，不做跨人比较</span>
         </div>
-        <div class="kpis" id="kpis"></div>
+        <div class="kpis" id="kpis" aria-busy="true">
+          <div class="kpi skeleton" aria-hidden="true"></div>
+          <div class="kpi skeleton" aria-hidden="true"></div>
+          <div class="kpi skeleton" aria-hidden="true"></div>
+          <div class="kpi skeleton" aria-hidden="true"></div>
+        </div>
         <noscript>本面板需要 JavaScript 载入数据。原始数据见
           <a href="https://github.com/zhubao315/health/tree/main/data">data/ 目录</a>。</noscript>
       </section>
@@ -255,10 +260,15 @@
           <div class="card-head">
             <h3>每日数据</h3>
             <div class="card-tools">
+              <button type="button" class="tool" id="toggle-compact" aria-pressed="false"
+                aria-controls="daily-table-wrap" title="只保留日期 / 睡眠 / HRV / 静息 / 步数">
+                精简列
+              </button>
               <button type="button" class="tool" id="toggle-daily" aria-expanded="false" aria-controls="daily-table-wrap">展开全部</button>
               <button type="button" class="tool" id="export-csv">导出当前范围 CSV</button>
             </div>
           </div>
+          <p class="scroll-hint" id="scroll-hint" aria-hidden="true">← 左右滑动表格查看更多列 →</p>
           <div class="table-wrap" id="daily-table-wrap"><table class="coverage" id="daily-table"></table></div>
         </article>
         <article class="card">
@@ -286,5 +296,6 @@
         </span>
       </div>
     </footer>
+    <button type="button" id="back-to-top" class="back-to-top" hidden aria-label="回到顶部">↑</button>
   </body>
 </html>
