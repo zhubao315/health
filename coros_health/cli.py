@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 
-from . import db, fetch
+from . import db, fetch, quality
 from .mcp import DEFAULT_ISSUER, get_token
 
 DATA = Path("data")
@@ -60,45 +60,63 @@ def main():
     )
 
     hrv_series = []
+    fetch_errors = {}
+
+    def _fetch(table, fn):
+        """Fetch one metric; a transient/limited API failure must never abort
+        the run — the dashboard builds from whatever the DB already has and
+        data_quality reports the gap."""
+        try:
+            db.upsert(conn, table, fn())
+        except Exception as exc:
+            fetch_errors[table] = str(exc)[:200]
+            print(f"[sync] warn: {table} fetch failed; keeping existing rows", flush=True)
 
     if not args.skip_daily_health:
-        daily = fetch.fetch_daily_health(token, start, end)
-        db.upsert(conn, "daily_health", daily)
+        _fetch("daily_health", lambda: fetch.fetch_daily_health(token, start, end))
 
     if not args.skip_sleep:
-        sleep = fetch.fetch_sleep(token, start, end)
-        db.upsert(conn, "sleep", sleep)
+        _fetch("sleep", lambda: fetch.fetch_sleep(token, start, end))
 
     if not args.skip_hrv:
-        hrv_rows, hrv_series = fetch.fetch_hrv(token, start, end)
-        db.upsert(conn, "hrv", hrv_rows)
+        try:
+            hrv_rows, hrv_series = fetch.fetch_hrv(token, start, end)
+            db.upsert(conn, "hrv", hrv_rows)
+        except Exception as exc:
+            fetch_errors["hrv"] = str(exc)[:200]
+            print("[sync] warn: hrv fetch failed; keeping existing rows", flush=True)
 
-    avg_hr = fetch.fetch_avg_hr(token, start, end)
-    db.upsert(conn, "avg_hr", avg_hr)
+    _fetch("avg_hr", lambda: fetch.fetch_avg_hr(token, start, end))
 
     if not args.skip_rhr:
-        rhr = fetch.fetch_rhr(token, start, end)
-        db.upsert(conn, "rhr", rhr)
+        _fetch("rhr", lambda: fetch.fetch_rhr(token, start, end))
 
-    stress = fetch.fetch_stress_daily(token, start, end)
-    db.upsert(conn, "stress_daily", stress)
+    _fetch("stress_daily", lambda: fetch.fetch_stress_daily(token, start, end))
 
     if not args.skip_load:
-        load = fetch.fetch_load(token, start, end)
-        db.upsert(conn, "load", load)
+        _fetch("load", lambda: fetch.fetch_load(token, start, end))
 
     stress_series = []
     if not args.skip_series:
-        stress_series = fetch.fetch_stress_series(token, start, end)
+        try:
+            stress_series = fetch.fetch_stress_series(token, start, end)
+        except Exception as exc:
+            fetch_errors["stress_series"] = str(exc)[:200]
+            print("[sync] warn: stress series failed; keeping existing csv", flush=True)
 
     sports = []
     if not args.skip_sports:
-        sports = fetch.fetch_sports(token, start, end)
-        db.upsert(conn, "activities", sports)
+        _fetch("activities", lambda: fetch.fetch_sports(token, start, end))
 
-    snapshots = fetch.fetch_snapshots(token)
-    snapshots["fetched_at"] = datetime.datetime.now().isoformat(timespec="seconds")
-    db.add_snapshot(conn, snapshots)
+    try:
+        snapshots = fetch.fetch_snapshots(token)
+    except Exception as exc:
+        fetch_errors["snapshots"] = str(exc)[:200]
+        print(f"[sync] warn: snapshots fetch failed; keeping existing rows", flush=True)
+        snapshots = {}
+    if snapshots:
+        snapshots["fetched_at"] = db.utcnow_iso()
+        db.add_snapshot(conn, snapshots)
 
     if not args.skip_series:
         n1 = _merge_series(
@@ -131,8 +149,10 @@ def main():
     (DASHBOARD / "data.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     )
+    quality.write_quality(conn, str(DASHBOARD / "data_quality.json"))
     db.set_meta(conn, "last_sync", end.isoformat())
-    db.set_meta(conn, "last_run", datetime.datetime.now().isoformat(timespec="seconds"))
+    db.set_meta(conn, "last_run", db.utcnow_iso())
+    db.set_meta(conn, "last_fetch_errors", json.dumps(fetch_errors, ensure_ascii=False))
 
     print("[sync] coverage:")
     for table, info in payload["coverage"].items():

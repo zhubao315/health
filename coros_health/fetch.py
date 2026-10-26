@@ -5,7 +5,12 @@ import json
 import time
 
 from . import parse
-from .mcp import RangeError, call_tool
+from .mcp import RangeError, TransientError, call_tool
+
+# A window whose server keeps answering "unavailable" is skipped rather than
+# allowed to abort the whole rebuild — but a run of consecutive skips means
+# the gateway is really down, so stop after this many.
+MAX_SAFE_SKIPS = 5
 
 
 def _d(value):
@@ -20,12 +25,48 @@ def date_chunks(start, end, days):
         current = stop + datetime.timedelta(days=1)
 
 
+_DAYS_LADDER = (3650, 1000, 365, 180, 90, 30, 7, 1)
+
+
+def _last_n_days(token, tool, total, parser, label, extra=()):
+    """Fetch tools whose only argument is a plain "recent N days" window.
+
+    These APIs have a server-side cap on `days`: a full-history rebuild asks
+    for ~1000+ days and gets rejected ("date is out of range"), which used to
+    abort the whole sync. Probe a descending ladder instead so every window
+    size the API accepts is tried, keep as much as it allows, and let the
+    untouched older rows in the database carry the rest of the history.
+    """
+    candidates = [total] + [d for d in (*extra, *_DAYS_LADDER) if d < total]
+    ordered = []
+    for c in candidates:
+        if c >= 1 and c not in ordered:
+            ordered.append(c)
+    for days in ordered:
+        try:
+            text = call_tool(token, tool, {"days": days})
+        except RangeError:
+            continue
+        rows = parser(text)
+        print(f"[fetch] {label} last {days}d: {len(rows)} rows", flush=True)
+        time.sleep(1.2)
+        return rows
+    print(
+        f"[fetch] {label}: every window size rejected; keeping existing database rows",
+        flush=True,
+    )
+    time.sleep(1.2)
+    return []
+
+
 def _range_call(token, tool, start, end, chunk_days, parser, label):
     rows = []
     current = start
+    skips = 0
     while current <= end:
         stop = min(current + datetime.timedelta(days=chunk_days - 1), end)
         args = {"startDate": current.strftime("%Y%m%d"), "endDate": stop.strftime("%Y%m%d")}
+        skipped, text = False, None
         while True:
             try:
                 text = call_tool(token, tool, args)
@@ -37,35 +78,36 @@ def _range_call(token, tool, start, end, chunk_days, parser, label):
                 stop = min(current + datetime.timedelta(days=chunk_days - 1), end)
                 args["endDate"] = stop.strftime("%Y%m%d")
                 print(f"[fetch] {label}: shrinking window to {chunk_days} days", flush=True)
-        parsed = parser(text)
-        if isinstance(parsed, tuple):
-            rows.extend(parsed[0])
-        else:
-            rows.extend(parsed)
-        print(
-            f"[fetch] {label} {current}..{stop}: {len(parsed[0]) if isinstance(parsed, tuple) else len(parsed)} rows",
-            flush=True,
-        )
+            except TransientError as exc:
+                skips += 1
+                print(
+                    f"[fetch] {label} {current}..{stop}: skipped ({exc})"
+                    + (f" — {skips} consecutive skips" if skips >= 2 else ""),
+                    flush=True,
+                )
+                if skips >= MAX_SAFE_SKIPS:
+                    raise
+                skipped = True
+                break
+        if not skipped:
+            skips = 0
+            parsed = parser(text)
+            if isinstance(parsed, tuple):
+                rows.extend(parsed[0])
+            else:
+                rows.extend(parsed)
+            print(
+                f"[fetch] {label} {current}..{stop}: {len(parsed[0]) if isinstance(parsed, tuple) else len(parsed)} rows",
+                flush=True,
+            )
         current = stop + datetime.timedelta(days=1)
         time.sleep(1.2)
     return rows
 
 
 def fetch_daily_health(token, start, end):
-    days = (end - start).days + 3
-    for candidate in [days, 1000, 500, 180, 90]:
-        if candidate <= 0:
-            continue
-        try:
-            text = call_tool(token, "queryDailyHealthData", {"days": min(candidate, days)})
-            rows = parse.parse_daily_health(text)
-            print(f"[fetch] daily health: {len(rows)} rows", flush=True)
-            return rows
-        except RangeError:
-            continue
-        finally:
-            time.sleep(1.2)
-    return []
+    total = (end - start).days + 3
+    return _last_n_days(token, "queryDailyHealthData", total, parse.parse_daily_health, "daily health", extra=(500,))
 
 
 def fetch_sleep(token, start, end):
@@ -77,16 +119,36 @@ def fetch_sleep(token, start, end):
 def fetch_hrv(token, start, end):
     assessments, series = [], []
     current = start
+    skips = 0
     while current <= end:
         stop = min(current + datetime.timedelta(days=6), end)
-        text = call_tool(
-            token,
-            "querySleepHrv",
-            {
-                "startDate": current.strftime("%Y%m%d"),
-                "endDate": stop.strftime("%Y%m%d"),
-            },
-        )
+        try:
+            text = call_tool(
+                token,
+                "querySleepHrv",
+                {
+                    "startDate": current.strftime("%Y%m%d"),
+                    "endDate": stop.strftime("%Y%m%d"),
+                },
+            )
+        except TransientError as exc:
+            skips += 1
+            print(
+                f"[fetch] hrv {current}..{stop}: skipped ({exc})"
+                + (f" — {skips} consecutive skips" if skips >= 2 else ""),
+                flush=True,
+            )
+            if skips >= MAX_SAFE_SKIPS:
+                raise
+            current = stop + datetime.timedelta(days=1)
+            time.sleep(1.2)
+            continue
+        except RangeError:
+            # single-week window rejected is as good as empty for this range
+            current = stop + datetime.timedelta(days=1)
+            time.sleep(1.2)
+            continue
+        skips = 0
         a, s = parse.parse_hrv(text)
         assessments.extend(a)
         series.extend(s)
@@ -103,29 +165,19 @@ def fetch_avg_hr(token, start, end):
 
 
 def fetch_rhr(token, start, end):
-    rows = []
-    current = start
-    while current <= end:
-        days = min(365, (end - current).days + 1)
-        text = call_tool(token, "queryRestingHeartRate", {"days": days})
-        rows.extend(parse.parse_rhr(text))
-        print(f"[fetch] rhr {current}: {len(rows)} rows", flush=True)
-        current += datetime.timedelta(days=days)
-        time.sleep(1.2)
-    return rows
+    """queryRestingHeartRate is anchored at *now* (最近 N 天语义).
+
+    So the honest request is a single call covering (start..end] measured
+    backwards from `end`, never a bogus loop of per-chunk "last 365 days".
+    The server caps that window: probe a descending ladder on rejection.
+    """
+    total = max(1, (end - start).days + 1)
+    return _last_n_days(token, "queryRestingHeartRate", total, parse.parse_rhr, "rhr")
 
 
 def fetch_stress_daily(token, start, end):
-    rows = []
-    current = start
-    while current <= end:
-        days = min(365, (end - current).days + 1)
-        text = call_tool(token, "queryStressLevel", {"days": days})
-        rows.extend(parse.parse_stress_daily(text))
-        print(f"[fetch] stress daily {current}: {len(rows)} rows", flush=True)
-        current += datetime.timedelta(days=days)
-        time.sleep(1.2)
-    return rows
+    total = max(1, (end - start).days + 1)
+    return _last_n_days(token, "queryStressLevel", total, parse.parse_stress_daily, "stress daily")
 
 
 def fetch_stress_series(token, start, end):
@@ -141,16 +193,8 @@ def fetch_stress_series(token, start, end):
 
 
 def fetch_load(token, start, end):
-    rows = []
-    current = start
-    while current <= end:
-        days = min(365, (end - current).days + 1)
-        text = call_tool(token, "queryTrainingLoadAssessment", {"days": days})
-        rows.extend(parse.parse_load(text))
-        print(f"[fetch] load {current}: {len(rows)} rows", flush=True)
-        current += datetime.timedelta(days=days)
-        time.sleep(1.2)
-    return rows
+    total = max(1, (end - start).days + 1)
+    return _last_n_days(token, "queryTrainingLoadAssessment", total, parse.parse_load, "load")
 
 
 def fetch_sports(token, start, end):

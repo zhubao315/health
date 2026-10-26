@@ -109,9 +109,26 @@ def parse_sleep_overview(text):
                 row[key] = _int(m.group(1))
             else:
                 row[key] = _int(m.group(1))
-        m = re.search(r"Main Sleep Window:\s*([^\n]+?)\s*-\s*([^\n]+)", body)
-        row["window_start"] = m.group(1).strip() if m else None
-        row["window_end"] = m.group(2).strip() if m else None
+        # Main Sleep Window may include dates ("2026-10-25 22:31 - 2026-10-26
+        # 06:13") whose hyphens defeat splitting on the first "-"; split on
+        # the last hyphen that is surrounded by spaces instead.
+        m = re.search(r"Main Sleep Window:\s*([^\n]+)", body)
+        if m:
+            raw_parts = m.group(1).strip().rsplit(" - ", 1)
+            if len(raw_parts) != 2:
+                raw_parts = [m.group(1).strip(), None]
+            start_raw, end_raw = raw_parts
+        else:
+            start_raw = end_raw = None
+
+        def _hhmm(text):
+            if not text:
+                return None
+            m = re.search(r"(\d{1,2}:\d{2})", text)
+            return m.group(1) if m else text.strip()
+
+        row["window_start"] = _hhmm(start_raw) if start_raw else None
+        row["window_end"] = _hhmm(end_raw) if end_raw else None
         rows.append(row)
     return rows
 
@@ -288,20 +305,20 @@ def parse_recovery(text):
 
 
 def parse_devices(text):
+    """Device snapshots — ONLY non-sensitive fields survive.
+
+    Serial numbers, Bluetooth IDs and warranty timestamps are hardware
+    identifiers; they must never reach any file that is committed or
+    published (dashboard/data.json, data/*.csv, data/health.db).
+    """
     devices = []
     for block in re.split(r"\n\d+\.\s+", text)[1:]:
         name = block.splitlines()[0].strip()
-        def field(label):
-            m = re.search(rf"{label}:\s*([^\n]+)", block)
-            return m.group(1).strip() if m else None
-
+        field = re.search(r"Model Name:\s*([^\n]+)", block)
         devices.append(
             {
                 "name": name,
-                "bluetooth_id": field("Bluetooth ID"),
-                "model": field("Model Name"),
-                "serial": field("Serial Number"),
-                "warranty": field("Warranty Expires"),
+                "model": field.group(1).strip() if field else None,
             }
         )
     return devices

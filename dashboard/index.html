@@ -17,10 +17,10 @@
     <header class="site-header">
       <div class="header-inner">
         <a class="brand" href="./">
-          <span class="pulse"></span>
+          <span class="pulse" aria-hidden="true"></span>
           zhubao315 的健康数据
         </a>
-        <nav class="nav">
+        <nav class="nav" aria-label="站点导航">
           <a href="https://zhubao315.github.io/running/">跑步</a>
           <a href="https://zhubao315.github.io/cycling/">骑行</a>
           <a href="https://zhubao315.github.io/hiking/">徒步</a>
@@ -29,99 +29,251 @@
       </div>
     </header>
 
-    <main class="main">
+    <main class="main" id="main">
+      <!-- ① 数据状态与更新时间 -->
+      <section id="data-status" class="status-strip" aria-live="polite" hidden>
+        <span id="status-icon" aria-hidden="true"></span>
+        <span id="status-text">载入数据…</span>
+        <a id="status-link" href="https://github.com/zhubao315/health/actions" target="_blank"
+          rel="noopener">同步记录</a>
+      </section>
+
       <section class="hero">
-        <div class="badge"><span class="dot"></span> COROS MCP · 每天 08:00 更新</div>
+        <div id="badge" class="badge"><span class="dot" aria-hidden="true"></span> 数据载入中…</div>
         <h1>睡眠、心率与恢复</h1>
         <p>
-          把 PACE 4 记录的睡眠、HRV、静息心率、压力、步数与训练负荷，整理成可以查询、可以做相关分析的数据集。
+          用 COROS MCP 每天同步的睡眠、HRV、静息心率、压力、步数与训练负荷，
+          回答四个问题：最近状态与个人基线相比如何？哪些指标在持续变化？
+          有没有值得观察的异常？下一步可以验证什么？
         </p>
-        <div class="range" id="range">
-          <button data-range="30">30 天</button>
-          <button data-range="90" class="active">90 天</button>
-          <button data-range="365">1 年</button>
-          <button data-range="0">全部</button>
+        <div class="range" id="range" role="group" aria-label="时间范围（全页共用）">
+          <button type="button" data-range="30">30 天</button>
+          <button type="button" data-range="90" class="active" aria-pressed="true">90 天</button>
+          <button type="button" data-range="365">1 年</button>
+          <button type="button" data-range="0">全部</button>
         </div>
       </section>
 
-      <section class="kpis" id="kpis"></section>
+      <!-- ② 今日健康指标 -->
+      <section aria-labelledby="kpi-title">
+        <div class="section-head">
+          <h2 id="kpi-title">目前状态</h2>
+          <span class="hint">各卡片标注自己的数据日期；与个人基线比较，不做跨人比较</span>
+        </div>
+        <div class="kpis" id="kpis"></div>
+        <noscript>本面板需要 JavaScript 载入数据。原始数据见
+          <a href="https://github.com/zhubao315/health/tree/main/data">data/ 目录</a>。</noscript>
+      </section>
 
-      <section class="grid">
-        <article class="card wide">
-          <div class="card-head">
-            <h2>睡眠结构</h2>
-            <span class="hint">深睡 / 浅睡 / REM / 清醒（分钟）</span>
-          </div>
-          <div class="chart-box"><canvas id="sleepChart"></canvas></div>
-        </article>
+      <!-- ③ 趋势与个人基线 -->
+      <section aria-labelledby="trend-title">
+        <div class="section-head">
+          <h2 id="trend-title">趋势与个人基线</h2>
+          <span class="hint" id="range-label"></span>
+        </div>
+        <div class="grid">
+          <article class="card wide">
+            <div class="card-head">
+              <h3>睡眠</h3>
+              <span class="hint">总时长（线）+ 分期结构（柱）。灰色竖条=当日分期缺失，不视为 0</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="sleepChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="sleepChart" role="img"
+                aria-label="睡眠：总时长折线与深睡浅睡REM清醒堆叠柱状图"></canvas></div>
+            <div class="data-table" id="table-sleepChart" hidden></div>
+          </article>
 
+          <article class="card">
+            <div class="card-head">
+              <h3>夜间 HRV</h3>
+              <span class="hint">单日值不宜单独解读为恢复好/差，看相对个人 28 天基线</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="hrvChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="hrvChart" role="img"
+                aria-label="夜间 HRV 折线：单日值、7 天均值、28 天个人基线与设备基线"></canvas></div>
+            <div class="data-table" id="table-hrvChart" hidden></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>静息心率</h3>
+              <span class="hint">和个人 7 天均值比较；持续变化比单日数值更值得看</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="rhrChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="rhrChart" role="img"
+                aria-label="静息心率折线：单日值与 7 天均值"></canvas></div>
+            <div class="data-table" id="table-rhrChart" hidden></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>压力</h3>
+              <span class="hint">全天平均（COROS 从心率变异性推算）</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="stressChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="stressChart" role="img"
+                aria-label="全天平均压力折线"></canvas></div>
+            <div class="data-table" id="table-stressChart" hidden></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>步数</h3>
+              <span class="hint">每日总步数（北京时间自然日）</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="stepsChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="stepsChart" role="img"
+                aria-label="每日步数柱状图"></canvas></div>
+            <div class="data-table" id="table-stepsChart" hidden></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ④ 训练与恢复 -->
+      <section aria-labelledby="training-title">
+        <div class="section-head">
+          <h2 id="training-title">训练与恢复</h2>
+          <span class="hint">负荷与负荷比共用时间轴；不把单一比值当作受伤风险或医学警报</span>
+        </div>
         <article class="card">
           <div class="card-head">
-            <h2>HRV</h2>
-            <span class="hint">夜间 HRV 与基线</span>
+            <h3>训练负荷</h3>
+            <span class="hint">短期（7 天）与长期（28 天）负荷</span>
+            <div class="card-tools">
+              <button type="button" class="tool" data-table-for="loadChart" aria-expanded="false">数据表</button>
+            </div>
           </div>
-          <div class="chart-box"><canvas id="hrvChart"></canvas></div>
+          <div class="chart-box"><canvas id="loadChart" role="img"
+              aria-label="训练负荷：短期与长期负荷同轴折线"></canvas></div>
+          <div class="data-table" id="table-loadChart" hidden></div>
         </article>
-
         <article class="card">
           <div class="card-head">
-            <h2>静息心率</h2>
-            <span class="hint">越低通常代表恢复越好</span>
+            <h3>负荷比（短期 / 长期）</h3>
+            <span class="hint">独立刻度，避免与负荷绝对量混淆</span>
           </div>
-          <div class="chart-box"><canvas id="rhrChart"></canvas></div>
+          <div class="chart-box small"><canvas id="loadRatioChart" role="img"
+              aria-label="负荷比单独折线图"></canvas></div>
         </article>
-
         <article class="card">
           <div class="card-head">
-            <h2>压力</h2>
-            <span class="hint">全天平均压力值</span>
+            <h3>近期运动</h3>
+            <span class="hint">近 90 天记录（不含定位等敏感字段）</span>
           </div>
-          <div class="chart-box"><canvas id="stressChart"></canvas></div>
-        </article>
-
-        <article class="card">
-          <div class="card-head">
-            <h2>步数</h2>
-            <span class="hint">每日总步数</span>
-          </div>
-          <div class="chart-box"><canvas id="stepsChart"></canvas></div>
-        </article>
-
-        <article class="card wide">
-          <div class="card-head">
-            <h2>训练负荷</h2>
-            <span class="hint">短期 / 长期负荷与负荷比</span>
-          </div>
-          <div class="chart-box"><canvas id="loadChart"></canvas></div>
+          <div class="table-wrap"><table class="coverage" id="activities"></table></div>
         </article>
       </section>
 
-      <section class="card">
-        <div class="card-head">
-          <h2>相关性</h2>
-          <span class="hint">Pearson r · 仅供个人观察，不代表因果</span>
+      <!-- ⑤ 相关性与个人洞察 -->
+      <section aria-labelledby="insight-title">
+        <div class="section-head">
+          <h2 id="insight-title">相关性与个人洞察</h2>
+          <span class="hint">相关 ≠ 因果；均为个人探索性观察</span>
         </div>
-        <div class="correlations" id="correlations"></div>
+        <article class="card">
+          <div class="card-head">
+            <h3>散点与相关性</h3>
+            <span class="hint">选择关系、滞后天数后重算；置信区间见下方表格</span>
+          </div>
+          <div class="corr-controls">
+            <label for="corr-select">关系</label>
+            <select id="corr-select"></select>
+            <label for="corr-lag">滞后（天）</label>
+            <select id="corr-lag">
+              <option value="0">0（同日）</option>
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </div>
+          <div class="chart-box"><canvas id="corrChart" role="img"
+              aria-label="两个所选指标的散点图，横轴为原因方向，纵轴为结果方向"></canvas></div>
+          <div class="table-wrap"><table class="coverage" id="corr-stats"></table></div>
+          <p class="note">
+            样本为可用配对日；任一侧缺失即剔除该配对。r/CI/n 为浏览器端对当前数据的即时计算，
+            末列 * 为 data.json 中同一关系的后端结果（用于口径一致性核对；两者相差 >0.03 即应怀疑环境或数据落后）。
+            多重探索意味着个别高相关可能是巧合，建议只把它当发现链路、再回看原始数据验证。
+          </p>
+        </article>
+        <div class="grid">
+          <article class="card">
+            <div class="card-head"><h3>近 6 周摘要</h3><span class="hint">周一为一周起点</span></div>
+            <div class="table-wrap"><table class="coverage" id="weekly"></table></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><h3>值得验证的变化</h3>
+              <span class="hint">最近 7 天均值 − 前 28 天均值，仅为观察假设</span></div>
+            <ul class="hypotheses" id="hypotheses"></ul>
+          </article>
+        </div>
       </section>
 
-      <section class="card">
-        <div class="card-head">
-          <h2>数据覆盖</h2>
-          <span class="hint" id="generated"></span>
+      <!-- ⑥ 数据质量与原始记录 -->
+      <section aria-labelledby="quality-title">
+        <div class="section-head">
+          <h2 id="quality-title">数据质量与原始记录</h2>
+          <span class="hint">缺失 ≠ 0；真实 0 值（步数等）与缺失分开列</span>
         </div>
-        <div class="table-wrap">
-          <table class="coverage" id="coverage"></table>
-        </div>
-        <p class="note">
-          原始 CSV / SQLite / 压缩时间序列都在
-          <a href="https://github.com/zhubao315/health/tree/main/data">data/</a>，可以直接用 pandas 或 SQL 分析。
-        </p>
+        <article class="card">
+          <div class="card-head"><h3>健康指标日历</h3>
+            <span class="hint">点击日期查看该天前后训练与恢复背景；灰格=无数据</span>
+            <div class="card-tools">
+              <select id="heat-metric" aria-label="日历热图指标">
+                <option value="sleep_total_min">睡眠时长</option>
+                <option value="hrv_avg">HRV</option>
+                <option value="rhr">静息心率</option>
+                <option value="stress_avg">压力</option>
+                <option value="load_short">短期负荷</option>
+                <option value="steps">步数</option>
+              </select>
+            </div>
+          </div>
+          <div id="heatmap" class="heatmap" role="grid" aria-label="指标日历热图"></div>
+          <div id="day-detail" class="day-detail" hidden></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><h3>数据完整率（近 90 天缺失为 0 项时视为完整）</h3></div>
+          <div class="table-wrap"><table class="coverage" id="quality-table"></table></div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h3>每日数据</h3>
+            <div class="card-tools">
+              <button type="button" class="tool" id="toggle-daily" aria-expanded="false" aria-controls="daily-table-wrap">展开全部</button>
+              <button type="button" class="tool" id="export-csv">导出当前范围 CSV</button>
+            </div>
+          </div>
+          <div class="table-wrap" id="daily-table-wrap"><table class="coverage" id="daily-table"></table></div>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <h2>数据覆盖</h2>
+            <span class="hint" id="generated"></span>
+          </div>
+          <div class="table-wrap"><table class="coverage" id="coverage"></table></div>
+          <p class="note">
+            原始 CSV / SQLite / 压缩时间序列都在
+            <a href="https://github.com/zhubao315/health/tree/main/data">data/</a>，
+            每个指标的单位、日期口径与来源见
+            <a href="https://github.com/zhubao315/health#数据字典">README 数据字典</a>。
+          </p>
+        </article>
       </section>
     </main>
 
     <footer class="footer">
       <div class="footer-inner">
-        <span>数据来自 COROS · 每天 08:00 自动同步</span>
+        <span>数据来自 COROS · 每天 08:00（北京时间）自动同步 · 坐标：睡眠/HRV 按醒来日，其余按自然日</span>
         <span>
           <a href="https://github.com/zhubao315/health">源码</a> ·
           <a href="https://github.com/zhubao315/health/blob/main/analysis/README.md">分析指南</a>

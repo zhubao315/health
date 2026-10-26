@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
-"""Small stdlib-only health analysis: averages, monthly table, correlations."""
+"""Small stdlib-only health analysis: averages, monthly table, correlations.
+
+统计口径与 dashboard 完全同源：相关性复用 coros_health.db.correlations
+（唯一权威清单 CORRELATION_SPECS，含 Pearson r + Fisher 95 % CI + 有效对数 n），
+不再自备一套 pearson/lagged，避免"两个面板各算各的"。
+
+注意：本工具为**描述性摘要**，展示均值/趋势/相关系数，不做任何健康建议。
+"""
 
 import argparse
-import sqlite3
+import sys
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
+
+# allow `python analysis/health_analysis.py`(workflow 用法) to find the package
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from coros_health import db  # noqa: E402
 
 DB = Path("data/health.db")
 
@@ -15,35 +27,9 @@ def rows(conn):
 
 
 def avg(values):
+    """均值跳过缺失（None），永不把缺失当 0 平均。"""
     values = [v for v in values if v is not None]
     return sum(values) / len(values) if values else None
-
-
-def pearson(xs, ys):
-    pairs = [(x, y) for x, y in zip(xs, ys) if x is not None and y is not None]
-    if len(pairs) < 8:
-        return None, len(pairs)
-    n = len(pairs)
-    mx = sum(x for x, _ in pairs) / n
-    my = sum(y for _, y in pairs) / n
-    cov = sum((x - mx) * (y - my) for x, y in pairs)
-    vx = sum((x - mx) ** 2 for x, _ in pairs)
-    vy = sum((y - my) ** 2 for _, y in pairs)
-    if vx <= 0 or vy <= 0:
-        return None, n
-    return cov / (vx**0.5 * vy**0.5), n
-
-
-def lagged(data, x_key, y_key, lag=1):
-    by_date = {r["date"]: r for r in data}
-    xs, ys = [], []
-    for r in data:
-        target = (date.fromisoformat(r["date"]) + timedelta(days=lag)).isoformat()
-        other = by_date.get(target)
-        if other:
-            xs.append(r.get(x_key))
-            ys.append(other.get(y_key))
-    return pearson(xs, ys)
 
 
 def fmt(value, digits=0):
@@ -58,8 +44,9 @@ def main():
     parser.add_argument("--out", default="analysis/summary.md")
     args = parser.parse_args()
 
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
+    # db.connect() 会顺带完成 nightly 重建的 schema/snapshot 迁移，保证
+    # `analysis/health_analysis.py` 在干净 clone 上也能独立运行。
+    conn = db.connect(str(DB))
     data = rows(conn)
     if not data:
         raise SystemExit("no data yet")
@@ -116,31 +103,32 @@ def main():
             f"{fmt(avg([r.get('steps') for r in group]))} |"
         )
 
-    checks = [
-        ("睡眠时长 → 次日 HRV", "sleep_total_min", "hrv_avg", 1),
-        ("短期负荷 → 次日静息心率", "load_short", "rhr", 1),
-        ("压力 → 当晚睡眠（次日记录）", "stress_avg", "sleep_total_min", 1),
-        ("步数 → 当晚睡眠（次日记录）", "steps", "sleep_total_min", 1),
-    ]
+    # 与 dashboard / analysis/metrics.json 共享同一份相关定义（含 CI 与 n）
     lines += [
         "",
-        "## 相关性（Pearson r，仅个人观察）",
+        "## 相关性（Pearson r，Fisher 95 % CI，仅个人观察）",
         "",
-        "| 关系 | r | n |",
-        "| --- | ---: | ---: |",
+        "| 关系 | r | 95 % CI | n | lag |",
+        "| --- | ---: | ---: | ---: | ---: |",
     ]
-    for label, x, y, lag in checks:
-        r, n = lagged(data, x, y, lag)
-        lines.append(f"| {label} | {fmt(r, 3)} | {n} |")
+    for spec in db.correlations(data):
+        ci = "—"
+        if spec["r"] is not None and spec["ci_low"] is not None:
+            ci = f"[{spec['ci_low']:.3f}, {spec['ci_high']:.3f}]"
+        lines.append(
+            f"| {spec['label']} | {fmt(spec['r'], 3)} | {ci} | {spec['n']} | +{spec['lag']}d |"
+        )
 
     lines += [
         "",
-        "> 相关性不是因果。样本量、季节、训练周期都会影响结果；用于发现值得进一步看的线索。",
+        "> 相关性不是因果。样本量、季节、训练周期都会影响结果；",
+        "> CI 宽（低 n 或弱相关）表示这段时间的数据不足以支持该方向的结论。",
         "",
         "## 更多",
         "",
         "- SQL 示例：`analysis/queries.sql`",
         "- 原始数据：`data/daily.csv`、`data/health.db`、`data/*_series.csv.gz`",
+        "- 数据质量审计：`dashboard/data_quality.json`（缺失率 / 断档 / 伪零 / 异常值）",
     ]
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text("\n".join(lines))
