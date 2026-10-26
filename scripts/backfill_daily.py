@@ -122,6 +122,13 @@ def main():
         f"[legacy] hrv={db.upsert(conn, 'hrv', hrv_rows)} "
         f"rhr={db.upsert(conn, 'rhr', rhr_rows)} load={db.upsert(conn, 'load', load_rows)}"
     )
+    # Keep CSV exports and the dashboard consistent with the corrected RHR.
+    db.export_csv(conn, "rhr", "data/rhr.csv")
+    db.export_csv(conn, "daily", "data/daily.csv")
+    payload = db.dashboard_payload(conn)
+    Path("dashboard/data.json").write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    )
 
 
 if __name__ == "__main__":
