@@ -9,6 +9,7 @@ Key invariants under test:
 - recent_activities exposes no location / label_id.
 """
 
+import datetime
 import json
 import sqlite3
 import tempfile
@@ -85,6 +86,103 @@ class TestUpsertIdempotency(DbFixture):
         )
         self.assertIsNone(row["steps"])
         self.assertNotIn(row["steps"], (0,))
+
+
+class TestUpsertNeverDowngrades(DbFixture):
+    """A re-fetch with missing fields must not erase stored history."""
+
+    def test_missing_field_keeps_stored_value(self):
+        conn = db.connect(self.path)
+        db.upsert(
+            conn,
+            "daily_health",
+            [{"date": "2026-01-01", "steps": 8000, "sleep_deep_min": 95}],
+        )
+        # re-fetch returns the same day with stage minutes omitted
+        db.upsert(
+            conn,
+            "daily_health",
+            [{"date": "2026-01-01", "steps": 8200, "sleep_deep_min": None}],
+        )
+        row = dict(
+            conn.execute("SELECT * FROM daily_health WHERE date='2026-01-01'").fetchone()
+        )
+        self.assertEqual(row["steps"], 8200)  # new value wins
+        self.assertEqual(row["sleep_deep_min"], 95)  # NULL did not overwrite
+
+    def test_missing_field_on_existing_sleep_row(self):
+        conn = db.connect(self.path)
+        db.upsert(
+            conn,
+            "sleep",
+            [{"date": "2026-01-01", "sleep_score": 85, "window_start": "22:31"}],
+        )
+        db.upsert(
+            conn,
+            "sleep",
+            [{"date": "2026-01-01", "sleep_score": None, "window_start": None}],
+        )
+        row = conn.execute("SELECT * FROM sleep WHERE date='2026-01-01'").fetchone()
+        self.assertEqual(row["sleep_score"], 85)
+        self.assertEqual(row["window_start"], "22:31")
+
+    def test_new_row_with_nulls_still_inserts(self):
+        conn = db.connect(self.path)
+        db.upsert(conn, "sleep", [{"date": "2026-01-02", "sleep_score": None}])
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM sleep").fetchone()[0], 1
+        )
+
+    def test_activities_keeps_old_field_when_new_is_null(self):
+        conn = db.connect(self.path)
+        db.upsert(
+            conn,
+            "activities",
+            [{"label_id": "L1", "date": "2026-01-01", "sport": "跑步", "distance_km": 10.5}],
+        )
+        db.upsert(
+            conn,
+            "activities",
+            [{"label_id": "L1", "date": "2026-01-01", "sport": None, "distance_km": 10.6}],
+        )
+        row = conn.execute("SELECT * FROM activities WHERE label_id='L1'").fetchone()
+        self.assertEqual(row["sport"], "跑步")
+        self.assertEqual(row["distance_km"], 10.6)
+
+
+class TestIncrementalWatermarks(DbFixture):
+    def test_no_meta_returns_floor(self):
+        conn = db.connect(self.path)
+        self.assertEqual(
+            db.incremental_start(conn, datetime.date(2024, 1, 1)),
+            datetime.date(2024, 1, 1),
+        )
+
+    def test_uses_oldest_watermark_minus_overlap(self):
+        conn = db.connect(self.path)
+        db.mark_table_synced(conn, "daily_health", "2026-10-26")
+        db.mark_table_synced(conn, "hrv", "2026-10-19")  # fell behind
+        start = db.incremental_start(conn, datetime.date(2024, 1, 1))
+        self.assertEqual(start, datetime.date(2026, 10, 18))
+
+    def test_falls_back_to_last_sync_lookback(self):
+        conn = db.connect(self.path)
+        db.set_meta(conn, "last_sync", "2026-10-20")
+        start = db.incremental_start(conn, datetime.date(2024, 1, 1))
+        self.assertEqual(start, datetime.date(2026, 10, 13))
+
+    def test_never_goes_before_floor(self):
+        conn = db.connect(self.path)
+        db.mark_table_synced(conn, "hrv", "2024-01-01")
+        start = db.incremental_start(conn, datetime.date(2024, 6, 1))
+        self.assertEqual(start, datetime.date(2024, 6, 1))
+
+    def test_skip_table_does_not_regress_others(self):
+        conn = db.connect(self.path)
+        db.mark_table_synced(conn, "sleep", "2026-10-26")
+        db.mark_table_synced(conn, "load", "2026-10-25")
+        start = db.incremental_start(conn, datetime.date(2024, 1, 1))
+        self.assertEqual(start, datetime.date(2026, 10, 24))
 
 
 class TestSnapshotMigration(DbFixture):

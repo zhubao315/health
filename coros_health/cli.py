@@ -32,7 +32,11 @@ def _merge_series(path, new_rows, columns, key="ts"):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", default="2024-01-01")
-    parser.add_argument("--end", default=datetime.date.today().isoformat())
+    parser.add_argument(
+        "--end",
+        default=None,
+        help="defaults to Beijing 'today' (UTC-agnostic; runners are UTC)",
+    )
     parser.add_argument("--incremental", action="store_true")
     parser.add_argument("--skip-series", action="store_true")
     parser.add_argument("--skip-sports", action="store_true")
@@ -43,14 +47,12 @@ def main():
     parser.add_argument("--skip-load", action="store_true")
     args = parser.parse_args()
 
-    end = datetime.date.fromisoformat(args.end)
+    end = datetime.date.fromisoformat(args.end) if args.end else quality.beijing_today()
     start = datetime.date.fromisoformat(args.start)
     conn = db.connect(str(DATA / "health.db"))
 
     if args.incremental:
-        last = db.get_meta(conn, "last_sync")
-        if last:
-            start = max(start, datetime.date.fromisoformat(last) - datetime.timedelta(days=7))
+        start = db.incremental_start(conn, start)
 
     print(f"[sync] {start} -> {end}", flush=True)
     token = get_token(
@@ -61,13 +63,18 @@ def main():
 
     hrv_series = []
     fetch_errors = {}
+    fetched = set()
 
     def _fetch(table, fn):
         """Fetch one metric; a transient/limited API failure must never abort
         the run — the dashboard builds from whatever the DB already has and
-        data_quality reports the gap."""
+        data_quality reports the gap. A successful table advances its own
+        watermark so a later run can fill only the real gap."""
         try:
-            db.upsert(conn, table, fn())
+            rows = fn()
+            db.upsert(conn, table, rows)
+            db.mark_table_synced(conn, table, end.isoformat())
+            fetched.add(table)
         except Exception as exc:
             fetch_errors[table] = str(exc)[:200]
             print(f"[sync] warn: {table} fetch failed; keeping existing rows", flush=True)
@@ -82,6 +89,8 @@ def main():
         try:
             hrv_rows, hrv_series = fetch.fetch_hrv(token, start, end)
             db.upsert(conn, "hrv", hrv_rows)
+            db.mark_table_synced(conn, "hrv", end.isoformat())
+            fetched.add("hrv")
         except Exception as exc:
             fetch_errors["hrv"] = str(exc)[:200]
             print("[sync] warn: hrv fetch failed; keeping existing rows", flush=True)
@@ -150,7 +159,18 @@ def main():
         json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     )
     quality.write_quality(conn, str(DASHBOARD / "data_quality.json"))
-    db.set_meta(conn, "last_sync", end.isoformat())
+    # last_sync only moves when every table actually synced; any table failure
+    # keeps it at the old date so the next run reaches back to the gap.
+    table_errors = {k: v for k, v in fetch_errors.items() if k in db.SYNC_TABLES}
+    if not table_errors:
+        db.set_meta(conn, "last_sync", end.isoformat())
+        db.set_meta(conn, "last_full_sync", end.isoformat())
+    else:
+        print(
+            f"[sync] partial: {', '.join(sorted(table_errors))} failed; "
+            f"last_sync stays at {db.get_meta(conn, 'last_sync')}",
+            flush=True,
+        )
     db.set_meta(conn, "last_run", db.utcnow_iso())
     db.set_meta(conn, "last_fetch_errors", json.dumps(fetch_errors, ensure_ascii=False))
 

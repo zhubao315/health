@@ -261,16 +261,57 @@ def _sanitize_snapshot_rows(conn):
     return None
 
 
-def upsert(conn, table, rows):
-    """Idempotent insert-or-replace on the table's primary key.
+PRIMARY_KEYS = {
+    "daily_health": "date",
+    "sleep": "date",
+    "hrv": "date",
+    "avg_hr": "date",
+    "rhr": "date",
+    "stress_daily": "date",
+    "load": "date",
+    "activities": "label_id",
+}
 
-    Every value keeps NULL for missing data; underscores never become 0.
+# Tables tracked by the incremental-sync watermark. Each successful fetch moves
+# its own watermark to `end`; a failed table keeps its old watermark so the
+# next run reaches back far enough to fill the gap.
+SYNC_TABLES = [
+    "daily_health",
+    "sleep",
+    "hrv",
+    "avg_hr",
+    "rhr",
+    "stress_daily",
+    "load",
+    "activities",
+]
+
+
+def upsert(conn, table, rows):
+    """Idempotent upsert that never downgrades existing data.
+
+    A re-fetch can legitimately come back with a field missing (COROS omits
+    stage minutes on some days, a partial histogram, …). With plain
+    INSERT OR REPLACE that NULL would wipe the value already stored, so the
+    archive would slowly erode. Here `excluded` values only win when non-NULL;
+    otherwise the stored value is kept:
+
+        date = COALESCE(excluded.date, daily_health.date)  → same for all cols
+
+    Genuine new values always overwrite; only NULL → keeps history.
     """
     if not rows:
         return 0
     columns = TABLES[table]
+    pk = PRIMARY_KEYS.get(table, "date")
     placeholders = ",".join("?" for _ in columns)
-    sql = f"INSERT OR REPLACE INTO {table} ({','.join(columns)}) VALUES ({placeholders})"
+    updates = ",".join(
+        f"{c}=COALESCE(excluded.{c}, {table}.{c})" for c in columns if c != pk
+    )
+    sql = (
+        f"INSERT INTO {table} ({','.join(columns)}) VALUES ({placeholders}) "
+        f"ON CONFLICT({pk}) DO UPDATE SET {updates}"
+    )
     values = []
     for row in rows:
         out = []
@@ -291,6 +332,35 @@ def upsert(conn, table, rows):
     conn.executemany(sql, values)
     conn.commit()
     return len(values)
+
+
+def mark_table_synced(conn, table, day):
+    """Advance one table's watermark to `day` (ISO date)."""
+    set_meta(conn, f"watermark.{table}", day)
+
+
+def incremental_start(conn, floor, lookback_days=7):
+    """Earliest date the next incremental run must fetch.
+
+    Uses the *oldest* per-table watermark so a table that failed for several
+    days is re-fetched from where it stopped — not from a global 'last_sync'
+    that may already have moved on. Falls back to last_sync − lookback, then
+    to `floor`.
+    """
+    marks = []
+    for table in SYNC_TABLES:
+        value = get_meta(conn, f"watermark.{table}")
+        if value:
+            try:
+                marks.append(datetime.date.fromisoformat(value))
+            except ValueError:
+                continue
+    if marks:
+        return max(floor, min(marks) - datetime.timedelta(days=1))
+    last = get_meta(conn, "last_sync")
+    if last:
+        return max(floor, datetime.date.fromisoformat(last) - datetime.timedelta(days=lookback_days))
+    return floor
 
 
 def set_meta(conn, key, value):

@@ -3,7 +3,11 @@ name: Health Sync
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *' # 08:00 Asia/Shanghai
+    # Twice a day: the morning run keeps the archive current, the evening run
+    # is a compensation pass — a failed morning (COROS throttling, runner
+    # hiccup) is retried the same day. Both are incremental and idempotent.
+    - cron: '0 0 * * *'  # 08:00 Asia/Shanghai
+    - cron: '0 12 * * *' # 20:00 Asia/Shanghai (compensation)
   push:
     branches:
       - main
@@ -103,3 +107,45 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  freshness:
+    # Runs after deploy so a data problem never blocks publishing the panel.
+    # Distinguishes "we failed to fetch" (red) from "the source has no data"
+    # (warning only — e.g. the watch was not worn).
+    name: Data freshness check
+    needs:
+      - sync
+      - deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify the archive is current
+        run: |
+          python3 - <<'PY'
+          import json, sys
+
+          q = json.load(open('dashboard/data_quality.json', encoding='utf-8'))
+          latest = q.get('latest_data_date')
+          days = q.get('days_since_latest')
+          status = q.get('sync_status')
+          errors = q.get('partial_fetch_errors') or {}
+          print(f'latest={latest} days_since={days} status={status}')
+
+          if errors:
+              print('::error::partial fetch failure: ' + ', '.join(sorted(errors)))
+              for table, msg in errors.items():
+                  print(f'::error::{table}: {msg}')
+              sys.exit(1)
+
+          if status == 'stale':
+              print(f'::warning::no new source data for {days} days (device not worn?)')
+          elif status == 'empty':
+              print('::error::archive is empty')
+              sys.exit(1)
+          else:
+              print('archive is current')
+          PY
