@@ -85,11 +85,14 @@ jobs:
         run: |
           # Content hash of the shipped JS/CSS. Referenced as ?v=<hash> in
           # index.html so a new deploy never pairs new HTML with a stale
-          # cached app.js (and vice-versa). Also stamps the __BUILD__ sentinel
-          # in both files for the runtime stale-pair guard.
+          # cached app.js (and vice-versa). The same hash is stamped into the
+          # __BUILD_HASH__ sentinel in both files for the runtime stale guard.
           V=$(cat dashboard/app.js dashboard/style.css | sha1sum | cut -c1-12)
-          sed -i "s/__BUILD__/${V}/g" dashboard/index.html dashboard/app.js
+          sed -i "s/__BUILD_HASH__/${V}/g" dashboard/index.html dashboard/app.js
           echo "asset build: ${V}"
+          # fail the deploy if stamping did not take effect on both sides
+          grep -q "window.__ASSET_BUILD__ = \"${V}\"" dashboard/index.html
+          grep -q "ASSET_BUILD = '${V}'" dashboard/app.js
           grep -o 'v=[0-9a-f]*' dashboard/index.html | sort -u
 
       - name: Upload dashboard

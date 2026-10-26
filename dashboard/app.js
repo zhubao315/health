@@ -16,10 +16,11 @@
 // mixes a cached HTML with a fresh app.js — or the reverse — would otherwise
 // hit `Cannot set properties of null (setting 'innerHTML')` and show an empty
 // page. Detect that combination early and ask for a hard refresh instead.
-const ASSET_BUILD = '__BUILD__';
+const ASSET_BUILD = '__BUILD_HASH__';
 
 const isStaleBuild = () =>
-  typeof window.__BUILD__ !== 'string' || window.__BUILD__ !== ASSET_BUILD;
+  typeof window.__ASSET_BUILD__ !== 'string' ||
+  window.__ASSET_BUILD__ !== ASSET_BUILD;
 
 const showTopBanner = (html) => {
   const bar = document.createElement('div');
