@@ -44,17 +44,7 @@ jobs:
         env:
           COROS_ACCOUNT: ${{ secrets.COROS_ACCOUNT }}
           COROS_PASSWORD: ${{ secrets.COROS_PASSWORD }}
-        run: python -m coros_health.cli --incremental --skip-rhr
-
-      - name: Correct resting HR from daily metrics
-        env:
-          COROS_ACCOUNT: ${{ secrets.COROS_ACCOUNT }}
-          COROS_PASSWORD: ${{ secrets.COROS_PASSWORD }}
-        run: |
-          python scripts/backfill_daily.py \
-            --start "$(date -u -d '7 days ago' +%Y%m%d)" \
-            --end "$(date -u +%Y%m%d)" \
-            --only-rhr
+        run: python -m coros_health.cli --incremental
 
       - name: Build analysis summary
         run: python analysis/health_analysis.py --days 30
