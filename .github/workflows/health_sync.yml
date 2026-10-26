@@ -1,0 +1,98 @@
+name: Health Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # 08:00 Asia/Shanghai
+  push:
+    branches:
+      - main
+    paths:
+      - coros_health/**
+      - analysis/**
+      - dashboard/**
+      - scripts/**
+      - README.md
+      - .github/workflows/health_sync.yml
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: health-sync
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  sync:
+    name: Sync health data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Sync COROS health data
+        env:
+          COROS_ACCOUNT: ${{ secrets.COROS_ACCOUNT }}
+          COROS_PASSWORD: ${{ secrets.COROS_PASSWORD }}
+        run: python -m coros_health.cli --incremental --skip-rhr
+
+      - name: Correct resting HR from daily metrics
+        env:
+          COROS_ACCOUNT: ${{ secrets.COROS_ACCOUNT }}
+          COROS_PASSWORD: ${{ secrets.COROS_PASSWORD }}
+        run: |
+          python scripts/backfill_daily.py \
+            --start "$(date -u -d '7 days ago' +%Y%m%d)" \
+            --end "$(date -u +%Y%m%d)" \
+            --only-rhr
+
+      - name: Build analysis summary
+        run: python analysis/health_analysis.py --days 30
+
+      - name: Update README coverage
+        run: python scripts/update_readme.py
+
+      - name: Commit new data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore: sync health data $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull --rebase origin main
+          git push
+
+  deploy:
+    name: Deploy dashboard
+    needs: sync
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Upload dashboard
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dashboard
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

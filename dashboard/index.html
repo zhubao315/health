@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#22d3ee" />
+    <meta
+      name="description"
+      content="zhubao315 的健康数据：睡眠、HRV、静息心率、压力、训练负荷，COROS MCP 每天自动同步。"
+    />
+    <title>zhubao315 的健康数据</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./chart.umd.min.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./">
+          <span class="pulse"></span>
+          zhubao315 的健康数据
+        </a>
+        <nav class="nav">
+          <a href="https://zhubao315.github.io/running/">跑步</a>
+          <a href="https://zhubao315.github.io/cycling/">骑行</a>
+          <a href="https://zhubao315.github.io/hiking/">徒步</a>
+          <a href="https://github.com/zhubao315/health">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="hero">
+        <div class="badge"><span class="dot"></span> COROS MCP · 每天 08:00 更新</div>
+        <h1>睡眠、心率与恢复</h1>
+        <p>
+          把 PACE 4 记录的睡眠、HRV、静息心率、压力、步数与训练负荷，整理成可以查询、可以做相关分析的数据集。
+        </p>
+        <div class="range" id="range">
+          <button data-range="30">30 天</button>
+          <button data-range="90" class="active">90 天</button>
+          <button data-range="365">1 年</button>
+          <button data-range="0">全部</button>
+        </div>
+      </section>
+
+      <section class="kpis" id="kpis"></section>
+
+      <section class="grid">
+        <article class="card wide">
+          <div class="card-head">
+            <h2>睡眠结构</h2>
+            <span class="hint">深睡 / 浅睡 / REM / 清醒（分钟）</span>
+          </div>
+          <div class="chart-box"><canvas id="sleepChart"></canvas></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>HRV</h2>
+            <span class="hint">夜间 HRV 与基线</span>
+          </div>
+          <div class="chart-box"><canvas id="hrvChart"></canvas></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>静息心率</h2>
+            <span class="hint">越低通常代表恢复越好</span>
+          </div>
+          <div class="chart-box"><canvas id="rhrChart"></canvas></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>压力</h2>
+            <span class="hint">全天平均压力值</span>
+          </div>
+          <div class="chart-box"><canvas id="stressChart"></canvas></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>步数</h2>
+            <span class="hint">每日总步数</span>
+          </div>
+          <div class="chart-box"><canvas id="stepsChart"></canvas></div>
+        </article>
+
+        <article class="card wide">
+          <div class="card-head">
+            <h2>训练负荷</h2>
+            <span class="hint">短期 / 长期负荷与负荷比</span>
+          </div>
+          <div class="chart-box"><canvas id="loadChart"></canvas></div>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>相关性</h2>
+          <span class="hint">Pearson r · 仅供个人观察，不代表因果</span>
+        </div>
+        <div class="correlations" id="correlations"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>数据覆盖</h2>
+          <span class="hint" id="generated"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="coverage" id="coverage"></table>
+        </div>
+        <p class="note">
+          原始 CSV / SQLite / 压缩时间序列都在
+          <a href="https://github.com/zhubao315/health/tree/main/data">data/</a>，可以直接用 pandas 或 SQL 分析。
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <span>数据来自 COROS · 每天 08:00 自动同步</span>
+        <span>
+          <a href="https://github.com/zhubao315/health">源码</a> ·
+          <a href="https://github.com/zhubao315/health/blob/main/analysis/README.md">分析指南</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>
