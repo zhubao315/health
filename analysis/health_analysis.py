@@ -119,8 +119,8 @@ def main():
     checks = [
         ("睡眠时长 → 次日 HRV", "sleep_total_min", "hrv_avg", 1),
         ("短期负荷 → 次日静息心率", "load_short", "rhr", 1),
-        ("压力 → 当日睡眠时长", "stress_avg", "sleep_total_min", 0),
-        ("步数 → 当日睡眠时长", "steps", "sleep_total_min", 0),
+        ("压力 → 当晚睡眠（次日记录）", "stress_avg", "sleep_total_min", 1),
+        ("步数 → 当晚睡眠（次日记录）", "steps", "sleep_total_min", 1),
     ]
     lines += [
         "",
