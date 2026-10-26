@@ -1,16 +1,59 @@
+/* Self-hosted type: Fira Sans (UI/latin) + Fira Code (numerals/tables).
+   CJK falls back to the system stack — Fira has no CJK coverage. */
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('./fonts/fira-sans-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('./fonts/fira-sans-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('./fonts/fira-sans-600.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('./fonts/fira-sans-700.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fira Code';
+  src: url('./fonts/fira-code-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fira Code';
+  src: url('./fonts/fira-code-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+
 :root {
   --accent: #22d3ee;
   --accent-2: #38bdf8;
-  --bg: #070b10;
-  --bg-soft: #0d131a;
-  --card: rgba(255, 255, 255, 0.035);
-  --text: #e8eef5;
-  --muted: #93a1b3;
-  --border: rgba(255, 255, 255, 0.08);
-  --radius: 18px;
+  --bg: #0a0c0f;
+  --bg-soft: #0f1318;
+  --card: #0d1116;
+  --text: #e6eaf0;
+  --muted: #8b95a5;
+  --border: #1f252d;
+  --border-strong: #2b333d;
+  --radius: 8px;
   --ok: #34d399;
   --warn: #fbbf24;
   --err: #fb7185;
+  --font-sans: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 * {
@@ -24,14 +67,13 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(1100px 560px at 82% -10%, rgba(34, 211, 238, 0.16), transparent 70%),
-    radial-gradient(900px 520px at -10% 18%, rgba(56, 189, 248, 0.08), transparent 70%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -59,8 +101,7 @@ a {
   top: 0;
   z-index: 20;
   border-bottom: 1px solid var(--border);
-  background: rgba(7, 11, 16, 0.82);
-  backdrop-filter: blur(16px);
+  background: var(--bg);
 }
 
 .header-inner,
@@ -111,12 +152,10 @@ a {
   height: 0.55rem;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 14px var(--accent);
 }
 
 .dot.stale {
   background: var(--warn);
-  box-shadow: 0 0 14px var(--warn);
 }
 
 .nav {
@@ -162,7 +201,7 @@ a {
   margin-top: 1.2rem;
   padding: 0.7rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--card);
   font-size: 0.82rem;
   color: var(--muted);
@@ -170,6 +209,24 @@ a {
 
 .status-strip.ok #status-text {
   color: var(--ok);
+}
+
+.status-strip #status-icon {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.status-strip.ok #status-icon {
+  color: var(--ok);
+}
+
+.status-strip.warn #status-icon {
+  color: var(--warn);
+}
+
+.status-strip.err #status-icon {
+  color: var(--err);
 }
 
 .status-strip.warn #status-text {
@@ -193,10 +250,8 @@ a {
   margin-top: 1rem;
   padding: clamp(1.4rem, 4vw, 3rem);
   border: 1px solid var(--border);
-  border-radius: 26px;
-  background:
-    linear-gradient(135deg, rgba(34, 211, 238, 0.1), transparent 48%),
-    var(--card);
+  border-radius: 10px;
+  background: var(--card);
 }
 
 .badge {
@@ -213,13 +268,11 @@ a {
 
 h1 {
   margin: 1rem 0 0.35rem;
-  font-size: clamp(2rem, 5vw, 3.8rem);
-  line-height: 1.04;
-  letter-spacing: -0.035em;
-  background: linear-gradient(100deg, #fff 12%, var(--accent) 60%, var(--accent-2) 96%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-size: clamp(1.75rem, 3.6vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
 .hero p {
@@ -268,7 +321,9 @@ h1 {
 
 .section-head h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .kpis {
@@ -280,16 +335,17 @@ h1 {
 .kpi {
   padding: 1rem 1.05rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--card);
 }
 
 .kpi .value {
   display: block;
-  color: var(--accent);
-  font-size: clamp(1.35rem, 2.4vw, 2rem);
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -540,7 +596,7 @@ h1 {
   margin-top: 0.9rem;
   padding: 0.8rem 0.95rem;
   border: 1px dashed rgba(34, 211, 238, 0.35);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: rgba(34, 211, 238, 0.05);
 }
 
@@ -584,7 +640,7 @@ h1 {
 .corr {
   padding: 0.8rem 0.9rem;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -712,8 +768,7 @@ h1 {
   font-size: 1.15rem;
   line-height: 1;
   cursor: pointer;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .back-to-top:hover,
@@ -753,6 +808,9 @@ h1 {
 .table-inline td.num,
 .coverage th.num,
 .table-inline th.num {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

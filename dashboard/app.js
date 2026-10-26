@@ -43,23 +43,33 @@ const showStaleBuildNotice = () => {
 
 const C = {
   accent: '#22d3ee',
-  accent2: '#38bdf8',
+  accent2: '#0ea5e9',
   red: '#fb7185',
   amber: '#fbbf24',
-  violet: '#a78bfa',
   slate: '#64748b',
   green: '#34d399',
-  grid: 'rgba(255,255,255,0.06)',
-  text: '#e8eef5',
-  muted: '#93a1b3',
+  grid: '#1a2029',
+  text: '#e6eaf0',
+  muted: '#8b95a5',
+  // aggregation lines stay neutral; series are separated by dash pattern too
+  line: '#e2e8f0',
+  lineDim: '#7c8795',
 };
 
 const chartDefaults = () => {
   Chart.defaults.color = C.muted;
   Chart.defaults.borderColor = C.grid;
   Chart.defaults.font.family =
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif";
+    "'Fira Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif";
   Chart.defaults.font.size = 11;
+  Chart.defaults.plugins.tooltip.backgroundColor = '#0d1116';
+  Chart.defaults.plugins.tooltip.borderColor = '#2b333d';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.titleColor = C.text;
+  Chart.defaults.plugins.tooltip.bodyColor = C.muted;
+  Chart.defaults.plugins.tooltip.cornerRadius = 6;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.displayColors = false;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     Chart.defaults.animation = false;
   }
@@ -163,7 +173,9 @@ const setStatus = (kind, text) => {
   const label = document.getElementById('status-text');
   if (!strip || !icon || !label) return; // stale HTML without status strip
   strip.hidden = !kind;
-  icon.textContent = kind === 'ok' ? '✅' : kind === 'warn' ? '⚠️' : kind === 'err' ? '⛔' : '⏳';
+  // typographic marks, not emoji: emoji vary per platform and can't be themed
+  icon.textContent =
+    kind === 'ok' ? '●' : kind === 'warn' ? '▲' : kind === 'err' ? '■' : '○';
   strip.classList.remove('ok', 'warn', 'err');
   if (kind) strip.classList.add(kind);
   label.textContent = text;
@@ -258,10 +270,10 @@ const lineDataset = (label, accessor, color, extra = {}) => ({
   data: state.rangeRows.map(accessor),
   borderColor: color,
   backgroundColor: color,
-  borderWidth: 2,
+  borderWidth: 1.6,
   pointRadius: 0,
-  pointHoverRadius: 4,
-  tension: 0.25,
+  pointHoverRadius: 3,
+  tension: 0.15,
   spanGaps: false,
   ...extra,
 });
@@ -344,19 +356,20 @@ const renderSleepChart = () => {
       data: {
         labels: rows.map(shortDate),
         datasets: [
-          { label: '深睡', data: rows.map((r) => r.deep), backgroundColor: '#164e63', borderColor: '#164e63', stack: 's' },
-          { label: '浅睡', data: rows.map((r) => r.light), backgroundColor: 'rgba(34,211,238,0.75)', borderColor: C.accent, stack: 's' },
-          { label: 'REM', data: rows.map((r) => r.rem), backgroundColor: 'rgba(167,139,250,0.75)', borderColor: C.violet, stack: 's' },
-          { label: '清醒', data: rows.map((r) => r.awake), backgroundColor: 'rgba(148,163,184,0.55)', borderColor: C.slate, stack: 's' },
+          { label: '深睡', data: rows.map((r) => r.deep), backgroundColor: '#0e7490', borderColor: '#0e7490', stack: 's' },
+          { label: '浅睡', data: rows.map((r) => r.light), backgroundColor: 'rgba(34,211,238,0.65)', borderColor: C.accent, stack: 's' },
+          { label: 'REM', data: rows.map((r) => r.rem), backgroundColor: 'rgba(125,211,252,0.45)', borderColor: '#7dd3fc', stack: 's' },
+          { label: '清醒', data: rows.map((r) => r.awake), backgroundColor: 'rgba(100,116,139,0.45)', borderColor: C.slate, stack: 's' },
           {
             label: '总时长（线）',
             data: rows.map((r) => r.sleep_total_min),
             type: 'line',
-            borderColor: C.amber,
-            backgroundColor: C.amber,
-            borderWidth: 1.6,
+            borderColor: C.line,
+            backgroundColor: C.line,
+            borderWidth: 1.2,
+            borderDash: [5, 4],
             pointRadius: 0,
-            tension: 0.25,
+            tension: 0.15,
           },
         ],
       },
@@ -390,9 +403,9 @@ const renderHrvChart = () => {
             borderWidth: 1.4,
             data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
           }),
-          lineDataset('28 天基线', () => null, C.violet, {
+          lineDataset('28 天基线', () => null, C.lineDim, {
             borderDash: [6, 4],
-            borderWidth: 1.4,
+            borderWidth: 1.2,
             data: state.rangeRows.map((_, i) => s.mean_28d[toGlobal(i)]),
           }),
           lineDataset('设备基线', () => null, C.slate, {
@@ -416,9 +429,9 @@ const renderRhrChart = () => {
       data: {
         labels: state.rangeRows.map(shortDate),
         datasets: [
-          lineDataset('单日', (r) => r.rhr, C.amber, {
+          lineDataset('单日', (r) => r.rhr, C.accent, {
             fill: true,
-            backgroundColor: 'rgba(251,191,36,0.08)',
+            backgroundColor: 'rgba(34,211,238,0.08)',
           }),
           {
             label: '7 天均值',
@@ -445,9 +458,9 @@ const renderStressChart = () => {
       data: {
         labels: state.rangeRows.map(shortDate),
         datasets: [
-          lineDataset('平均压力', (r) => r.stress_avg, C.red, {
+          lineDataset('平均压力', (r) => r.stress_avg, C.accent, {
             fill: true,
-            backgroundColor: 'rgba(251,113,133,0.08)',
+            backgroundColor: 'rgba(34,211,238,0.08)',
           }),
           {
             label: '7 天均值',
