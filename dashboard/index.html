@@ -9,9 +9,15 @@
       content="zhubao315 的健康数据：睡眠、HRV、静息心率、压力、训练负荷，COROS MCP 每天自动同步。"
     />
     <title>zhubao315 的健康数据</title>
-    <link rel="stylesheet" href="./style.css" />
-    <script src="./chart.umd.min.js" defer></script>
-    <script src="./app.js" defer></script>
+    <link rel="stylesheet" href="./style.css?v=__BUILD__" />
+    <!-- build sentinel: stamped together with app.js at deploy time; a stale
+         HTML/JS pair is detected in app.js and shows a refresh hint instead of
+         crashing on missing DOM nodes -->
+    <script>
+      window.__BUILD__ = "__BUILD__";
+    </script>
+    <script src="./chart.umd.min.js?v=__BUILD__" defer></script>
+    <script src="./app.js?v=__BUILD__" defer></script>
   </head>
   <body>
     <header class="site-header">

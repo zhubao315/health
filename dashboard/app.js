@@ -9,6 +9,35 @@
 
 'use strict';
 
+// ------------------------------------------------------- build / cache guard
+
+// Stamped together with index.html by the deploy workflow (workflow replaces
+// both "__BUILD__" placeholders with the same content hash). A browser that
+// mixes a cached HTML with a fresh app.js — or the reverse — would otherwise
+// hit `Cannot set properties of null (setting 'innerHTML')` and show an empty
+// page. Detect that combination early and ask for a hard refresh instead.
+const ASSET_BUILD = '__BUILD__';
+
+const isStaleBuild = () =>
+  typeof window.__BUILD__ !== 'string' || window.__BUILD__ !== ASSET_BUILD;
+
+const showTopBanner = (html) => {
+  const bar = document.createElement('div');
+  bar.setAttribute('role', 'alert');
+  bar.style.cssText =
+    'position:sticky;top:0;z-index:99999;padding:14px 18px;background:#7f1d1d;' +
+    'color:#fff;font:14px/1.65 system-ui,-apple-system,sans-serif;text-align:center;';
+  bar.innerHTML = html;
+  document.body.prepend(bar);
+};
+
+const showStaleBuildNotice = () => {
+  showTopBanner(
+    '页面资源版本不一致（浏览器缓存了旧文件），数据因此无法加载。<br>' +
+      '请<b>强制刷新</b>：桌面 <b>Ctrl/Cmd + Shift + R</b>；手机在微信中「刷新」或重新打开链接。'
+  );
+};
+
 // ------------------------------------------------------------------ helpers
 
 const C = {
@@ -127,11 +156,13 @@ const seriesAt = (skey, field, date) => {
 const setStatus = (kind, text) => {
   const strip = document.getElementById('data-status');
   const icon = document.getElementById('status-icon');
+  const label = document.getElementById('status-text');
+  if (!strip || !icon || !label) return; // stale HTML without status strip
   strip.hidden = !kind;
   icon.textContent = kind === 'ok' ? '✅' : kind === 'warn' ? '⚠️' : kind === 'err' ? '⛔' : '⏳';
   strip.classList.remove('ok', 'warn', 'err');
   if (kind) strip.classList.add(kind);
-  document.getElementById('status-text').textContent = text;
+  label.textContent = text;
 };
 
 const renderStatus = () => {
@@ -1043,13 +1074,22 @@ const applyRange = (n) => {
 
 const showFatal = (message) => {
   setStatus('err', message);
-  document.getElementById('kpis').innerHTML = `
+  const kpis = document.getElementById('kpis');
+  if (!kpis) {
+    showTopBanner(`<b>数据加载失败</b><br>${message}`);
+    return;
+  }
+  kpis.innerHTML = `
     <div class="kpi"><span class="value">!</span>
       <span class="label">数据加载失败</span>
       <span class="sub">${message}</span></div>`;
 };
 
 const init = async () => {
+  if (isStaleBuild()) {
+    showStaleBuildNotice();
+    return;
+  }
   chartDefaults();
   try {
     const [dataResp, qualityResp] = await Promise.all([

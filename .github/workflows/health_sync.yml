@@ -81,6 +81,17 @@ jobs:
         with:
           ref: main
 
+      - name: Stamp asset fingerprints
+        run: |
+          # Content hash of the shipped JS/CSS. Referenced as ?v=<hash> in
+          # index.html so a new deploy never pairs new HTML with a stale
+          # cached app.js (and vice-versa). Also stamps the __BUILD__ sentinel
+          # in both files for the runtime stale-pair guard.
+          V=$(cat dashboard/app.js dashboard/style.css | sha1sum | cut -c1-12)
+          sed -i "s/__BUILD__/${V}/g" dashboard/index.html dashboard/app.js
+          echo "asset build: ${V}"
+          grep -o 'v=[0-9a-f]*' dashboard/index.html | sort -u
+
       - name: Upload dashboard
         uses: actions/upload-pages-artifact@v3
         with:
