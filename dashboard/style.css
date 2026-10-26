@@ -81,12 +81,22 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.62rem;
   font-weight: 800;
   letter-spacing: -0.01em;
+  color: var(--text);
 }
 
-.pulse,
+/* same avatar mark as the three sport sites */
+.brand-logo {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  flex: none;
+}
+
 .dot {
   width: 0.55rem;
   height: 0.55rem;
@@ -119,6 +129,19 @@ a {
   color: var(--text);
   border-color: rgba(34, 211, 238, 0.45);
   background: rgba(255, 255, 255, 0.05);
+}
+
+/* active station — mirrors .pill-active on the sport sites */
+.nav a[aria-current='page'] {
+  color: #041016;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.nav a[aria-current='page']:hover {
+  color: #041016;
+  background: var(--accent);
 }
 
 /* ① 数据状态条 —— 不只靠颜色，配图标 + 文本 */
