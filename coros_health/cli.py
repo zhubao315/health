@@ -158,7 +158,6 @@ def main():
     (DASHBOARD / "data.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     )
-    quality.write_quality(conn, str(DASHBOARD / "data_quality.json"))
     # last_sync only moves when every table actually synced; any table failure
     # keeps it at the old date so the next run reaches back to the gap.
     table_errors = {k: v for k, v in fetch_errors.items() if k in db.SYNC_TABLES}
@@ -173,6 +172,10 @@ def main():
         )
     db.set_meta(conn, "last_run", db.utcnow_iso())
     db.set_meta(conn, "last_fetch_errors", json.dumps(fetch_errors, ensure_ascii=False))
+    # write_quality reads last_sync/last_run/last_fetch_errors from meta, so it
+    # must run *after* they are written — otherwise the published report lags a
+    # full day behind the data it describes.
+    quality.write_quality(conn, str(DASHBOARD / "data_quality.json"))
 
     print("[sync] coverage:")
     for table, info in payload["coverage"].items():

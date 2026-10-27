@@ -3,11 +3,11 @@ name: Health Sync
 on:
   workflow_dispatch:
   schedule:
-    # Twice a day: the morning run keeps the archive current, the evening run
-    # is a compensation pass — a failed morning (COROS throttling, runner
-    # hiccup) is retried the same day. Both are incremental and idempotent.
-    - cron: '0 0 * * *'  # 08:00 Asia/Shanghai
-    - cron: '0 12 * * *' # 20:00 Asia/Shanghai (compensation)
+    # Off the top of the hour: GitHub's scheduler delays (sometimes by hours)
+    # every workflow that fires at :00, so the morning run drifted and the
+    # dashboard looked stale. 17 past the hour is far less contended.
+    - cron: '17 0 * * *'   # 08:17 Asia/Shanghai
+    - cron: '17 12 * * *'  # 20:17 Asia/Shanghai (same-day compensation)
   push:
     branches:
       - main
