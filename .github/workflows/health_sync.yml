@@ -3,11 +3,12 @@ name: Health Sync
 on:
   workflow_dispatch:
   schedule:
-    # Off the top of the hour: GitHub's scheduler delays (sometimes by hours)
-    # every workflow that fires at :00, so the morning run drifted and the
-    # dashboard looked stale. 17 past the hour is far less contended.
-    - cron: '17 0 * * *'   # 08:17 Asia/Shanghai
-    - cron: '17 12 * * *'  # 20:17 Asia/Shanghai (same-day compensation)
+    # 09:07 / 21:07 Asia/Shanghai — twice a day, deliberately a few minutes past
+    # the hour because GitHub's scheduler heavily delays :00 slots (observed a
+    # 6-hour drift on this repo). The evening run also acts as the same-day
+    # compensation pass if the morning one was skipped or throttled.
+    - cron: '7 1 * * *'   # 09:07 Asia/Shanghai
+    - cron: '7 13 * * *'  # 21:07 Asia/Shanghai
   push:
     branches:
       - main
