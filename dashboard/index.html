@@ -29,6 +29,7 @@
             alt="" width="34" height="34" />
           <span>zhubao315 的健康数据</span>
         </a>
+        <div class="header-meta" id="header-meta" aria-label="个人档案摘要"></div>
         <nav class="nav" aria-label="站点导航">
           <a href="https://zhubao315.github.io/running/">跑步</a>
           <a href="https://zhubao315.github.io/cycling/">骑行</a>
@@ -39,16 +40,9 @@
       </div>
     </header>
 
-    <main class="main" id="main">
-      <!-- ① 数据状态与更新时间 -->
-      <section class="hero">
-        <div id="badge" class="badge"><span class="dot" aria-hidden="true"></span> 数据载入中…</div>
-        <h1>健康驾驶舱</h1>
-        <p>
-          用 COROS MCP 每天同步的睡眠、HRV、静息心率、压力、步数与训练负荷，
-          回答四个问题：最近状态与个人基线相比如何？哪些指标在持续变化？
-          有没有值得观察的异常？下一步可以验证什么？
-        </p>
+    <div class="sticky-bar" id="sticky-bar">
+      <div class="sticky-inner">
+        <span class="window-label" id="window-label">当前窗口：最近 90 天</span>
         <div class="range" id="range" role="group" aria-label="时间范围（全页共用）">
           <button type="button" data-range="7">7 天</button>
           <button type="button" data-range="30">30 天</button>
@@ -57,28 +51,54 @@
           <button type="button" data-range="0">全部</button>
           <button type="button" id="custom-toggle" aria-expanded="false" aria-controls="custom-range">自定义</button>
         </div>
-        <div class="custom-range" id="custom-range" hidden>
-          <label for="range-start">从</label>
-          <input type="date" id="range-start" />
-          <span aria-hidden="true">→</span>
-          <label for="range-end">到</label>
-          <input type="date" id="range-end" />
-          <button type="button" class="tool" id="range-apply">应用</button>
-          <span class="hint" id="custom-range-note"></span>
+      </div>
+      <div class="custom-range" id="custom-range" hidden>
+        <label for="range-start">从</label>
+        <input type="date" id="range-start" />
+        <span aria-hidden="true">→</span>
+        <label for="range-end">到</label>
+        <input type="date" id="range-end" />
+        <button type="button" class="tool" id="range-apply">应用</button>
+        <span class="hint" id="custom-range-note"></span>
+      </div>
+      <nav class="section-nav" aria-label="分区导航">
+        <a href="#overview">概览</a>
+        <a href="#recovery">恢复趋势</a>
+        <a href="#training">训练与身体</a>
+        <a href="#correlation">相关性</a>
+        <a href="#quality">数据质量</a>
+      </nav>
+    </div>
+
+    <main class="main" id="main">
+      <!-- ① 数据状态与更新时间 -->
+      <section class="hero hero-compact">
+        <div class="hero-main">
+          <h1>健康驾驶舱</h1>
+          <p class="hero-sub">
+            COROS 每日同步的睡眠、夜间 HRV、静息心率、压力、步数与训练负荷 ·
+            全部对比个人 7 天均值与 28 天基线，不做跨人群评判
+          </p>
         </div>
+        <div id="badge" class="badge"><span class="dot" aria-hidden="true"></span> 数据载入中…</div>
       </section>
 
-      <!-- ② 个人档案（身高为固定档案值，体重/BMI 为最新测量） -->
-      <section class="profile-section" aria-labelledby="profile-title">
+      <!-- ② 四问速览（Executive summary） -->
+      <section class="exec-section" id="exec-summary" aria-labelledby="exec-title">
         <div class="section-head">
-          <h2 id="profile-title">个人档案</h2>
-          <span class="hint">身高为固定档案值；体重与 BMI 取最近一次有效测量</span>
+          <h2 id="exec-title">四问速览</h2>
+          <span class="hint">基于当前窗口与个人 28 天基线自动生成；统计观察，不是医学结论</span>
         </div>
-        <div class="profile-card" id="profile-card"></div>
+        <div class="exec-grid" id="exec-grid">
+          <div class="exec-card skeleton" aria-hidden="true"></div>
+          <div class="exec-card skeleton" aria-hidden="true"></div>
+          <div class="exec-card skeleton" aria-hidden="true"></div>
+          <div class="exec-card skeleton" aria-hidden="true"></div>
+        </div>
       </section>
 
       <!-- ③ 今日健康指标 -->
-      <section aria-labelledby="kpi-title">
+      <section id="overview" aria-labelledby="kpi-title">
         <div class="section-head">
           <h2 id="kpi-title">目前状态</h2>
           <span class="hint">各卡片标注自己的数据日期；与个人基线比较，不做跨人比较</span>
@@ -91,12 +111,35 @@
         </div>
         <noscript>本面板需要 JavaScript 载入数据。原始数据见
           <a href="https://github.com/zhubao315/health/tree/main/data">data/ 目录</a>。</noscript>
+<article class="card">
+          <div class="card-head"><h3>健康指标日历</h3>
+            <span class="hint">点击日期查看该天前后训练与恢复背景；灰格=无数据</span>
+            <div class="card-tools">
+              <select id="heat-metric" aria-label="日历热图指标">
+                <option value="sleep_total_min">睡眠时长</option>
+                <option value="hrv_avg">HRV</option>
+                <option value="rhr">静息心率</option>
+                <option value="stress_avg">压力</option>
+                <option value="load_short">短期负荷</option>
+                <option value="steps">步数</option>
+              </select>
+            </div>
+          </div>
+          <div id="heatmap" class="heatmap" role="grid" aria-label="指标日历热图"></div>
+          <div id="day-detail" class="day-detail" hidden></div>
+        </article>
+
+<article class="card">
+            <div class="card-head"><h3>近 6 周摘要</h3><span class="hint">周一为一周起点</span></div>
+            <div class="table-wrap"><table class="coverage" id="weekly"></table></div>
+          </article>
+
       </section>
 
-      <!-- ③ 趋势与个人基线 -->
-      <section aria-labelledby="trend-title">
+      <!-- ④ 恢复趋势 -->
+      <section id="recovery" aria-labelledby="trend-title">
         <div class="section-head">
-          <h2 id="trend-title">趋势与个人基线</h2>
+          <h2 id="trend-title">日常恢复趋势</h2>
           <span class="hint" id="range-label"></span>
         </div>
         <div class="grid">
@@ -113,32 +156,7 @@
             <div class="data-table" id="table-sleepChart" hidden></div>
           </article>
 
-          <article class="card wide" id="body-card">
-            <div class="card-head">
-              <h3>体重与体脂</h3>
-              <span class="hint" id="body-hint">好轻体脂秤 · 按称重日记录（2018 起），不与上方时间范围联动</span>
-              <div class="card-tools">
-                <button type="button" class="tool" data-table-for="weightChart" aria-expanded="false">数据表</button>
-              </div>
-            </div>
-            <div class="body-metrics" id="body-metrics"></div>
-            <p class="body-empty" id="body-empty" hidden>当前时间范围内没有称重记录。切换到更长的时间范围，或下次称重后会自动出现。</p>
-            <div class="body-charts">
-              <div class="chart-box"><canvas id="weightChart" role="img"
-                  aria-label="体重随时间的走势，含最近 7 次称重的均值"></canvas></div>
-              <div class="chart-box"><canvas id="bodyFatChart" role="img"
-                  aria-label="体脂率随时间的走势，含最近 7 次称重的均值"></canvas></div>
-              <div class="chart-box"><canvas id="bodyScatterChart" role="img"
-                  aria-label="BMI 与体脂率的散点图，按年份着色"></canvas></div>
-              <div class="chart-box"><canvas id="weightRateChart" role="img"
-                  aria-label="体重变化速率，按周计算，正值为增重"></canvas></div>
-              <div class="chart-box"><canvas id="bodyCompChart" role="img"
-                  aria-label="体重组成：脂肪量与去脂体重的堆叠面积图"></canvas></div>
-            </div>
-            <p class="note body-comp-note">体重组成 = 脂肪量（体重 × 体脂率）+ 去脂体重（体重 − 脂肪量），两者均为<strong>计算值</strong>，不是设备直接测量；体水分、蛋白质、骨量与设备算法相关，未参与加总。</p>
-            <div class="body-years" id="body-years"></div>
-            <div class="data-table" id="table-weightChart" hidden></div>
-          </article>
+          
 
           <article class="card">
             <div class="card-head">
@@ -194,10 +212,10 @@
         </div>
       </section>
 
-      <!-- ④ 训练与恢复 -->
-      <section aria-labelledby="training-title">
+      <!-- ⑤ 训练与身体成分 -->
+      <section id="training" aria-labelledby="training-title">
         <div class="section-head">
-          <h2 id="training-title">训练与恢复</h2>
+          <h2 id="training-title">训练与身体成分</h2>
           <span class="hint">负荷与负荷比共用时间轴；不把单一比值当作受伤风险或医学警报</span>
         </div>
         <article class="card wide">
@@ -239,10 +257,37 @@
           </div>
           <div class="table-wrap"><table class="coverage" id="activities"></table></div>
         </article>
+<article class="card wide" id="body-card">
+            <div class="card-head">
+              <h3>体重与体脂</h3>
+              <span class="hint" id="body-hint"><span class="tag-independent">独立时间轴</span> 好轻体脂秤 · 2018 年起按称重日记录 · 不受顶部时间范围过滤</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="weightChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="body-metrics" id="body-metrics"></div>
+            <p class="body-empty" id="body-empty" hidden>当前时间范围内没有称重记录。切换到更长的时间范围，或下次称重后会自动出现。</p>
+            <div class="body-charts">
+              <div class="chart-box"><canvas id="weightChart" role="img"
+                  aria-label="体重随时间的走势，含最近 7 次称重的均值"></canvas></div>
+              <div class="chart-box"><canvas id="bodyFatChart" role="img"
+                  aria-label="体脂率随时间的走势，含最近 7 次称重的均值"></canvas></div>
+              <div class="chart-box"><canvas id="bodyScatterChart" role="img"
+                  aria-label="BMI 与体脂率的散点图，按年份着色"></canvas></div>
+              <div class="chart-box"><canvas id="weightRateChart" role="img"
+                  aria-label="体重变化速率，按周计算，正值为增重"></canvas></div>
+              <div class="chart-box"><canvas id="bodyCompChart" role="img"
+                  aria-label="体重组成：脂肪量与去脂体重的堆叠面积图"></canvas></div>
+            </div>
+            <p class="note body-comp-note">体重组成 = 脂肪量（体重 × 体脂率）+ 去脂体重（体重 − 脂肪量），两者均为<strong>计算值</strong>，不是设备直接测量；体水分、蛋白质、骨量与设备算法相关，未参与加总。</p>
+            <div class="body-years" id="body-years"></div>
+            <div class="data-table" id="table-weightChart" hidden></div>
+          </article>
+
       </section>
 
-      <!-- ⑤ 相关性与个人洞察 -->
-      <section aria-labelledby="insight-title">
+      <!-- ⑥ 相关性与个人洞察 -->
+      <section id="correlation" aria-labelledby="insight-title">
         <div class="section-head">
           <h2 id="insight-title">相关性与个人洞察</h2>
           <span class="hint">相关 ≠ 因果；均为个人探索性观察</span>
@@ -263,8 +308,13 @@
               <option value="3">3</option>
             </select>
           </div>
-          <div class="chart-box"><canvas id="corrChart" role="img"
-              aria-label="两个所选指标的散点图，横轴为原因方向，纵轴为结果方向"></canvas></div>
+          <div class="corr-body">
+            <div class="corr-plot">
+              <div class="chart-box"><canvas id="corrChart" role="img"
+                  aria-label="两个所选指标的散点图，横轴为原因方向，纵轴为结果方向"></canvas></div>
+            </div>
+            <div class="bucket-panel" id="corr-buckets" aria-live="polite"></div>
+          </div>
           <div class="table-wrap"><table class="coverage" id="corr-stats"></table></div>
           <p class="note">
             样本为可用配对日；任一侧缺失即剔除该配对。r/CI/n 为浏览器端对当前数据的即时计算，
@@ -274,10 +324,6 @@
         </article>
         <div class="grid">
           <article class="card">
-            <div class="card-head"><h3>近 6 周摘要</h3><span class="hint">周一为一周起点</span></div>
-            <div class="table-wrap"><table class="coverage" id="weekly"></table></div>
-          </article>
-          <article class="card">
             <div class="card-head"><h3>值得验证的变化</h3>
               <span class="hint">最近 7 天均值 − 前 28 天均值，仅为观察假设</span></div>
             <ul class="hypotheses" id="hypotheses"></ul>
@@ -285,29 +331,13 @@
         </div>
       </section>
 
-      <!-- ⑥ 数据质量与原始记录 -->
-      <section aria-labelledby="quality-title">
+      <!-- ⑦ 数据质量与原始记录 -->
+      <section id="quality" aria-labelledby="quality-title">
         <div class="section-head">
           <h2 id="quality-title">数据质量与原始记录</h2>
           <span class="hint">缺失 ≠ 0；真实 0 值（步数等）与缺失分开列</span>
         </div>
-        <article class="card">
-          <div class="card-head"><h3>健康指标日历</h3>
-            <span class="hint">点击日期查看该天前后训练与恢复背景；灰格=无数据</span>
-            <div class="card-tools">
-              <select id="heat-metric" aria-label="日历热图指标">
-                <option value="sleep_total_min">睡眠时长</option>
-                <option value="hrv_avg">HRV</option>
-                <option value="rhr">静息心率</option>
-                <option value="stress_avg">压力</option>
-                <option value="load_short">短期负荷</option>
-                <option value="steps">步数</option>
-              </select>
-            </div>
-          </div>
-          <div id="heatmap" class="heatmap" role="grid" aria-label="指标日历热图"></div>
-          <div id="day-detail" class="day-detail" hidden></div>
-        </article>
+        
         <article class="card">
           <div class="card-head"><h3>数据完整率（近 90 天缺失为 0 项时视为完整）</h3></div>
           <div class="table-wrap"><table class="coverage" id="quality-table"></table></div>

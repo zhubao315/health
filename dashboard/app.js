@@ -76,11 +76,163 @@ const chartDefaults = () => {
 };
 
 const charts = {};
+
+// --------------------------------------------- synced crosshair + day snapshot
+// Hovering any recovery/load chart highlights the same calendar day on every
+// chart in its group, and shows one context card with that day's snapshot.
+// The card is a convenience view only — it reads the same payload values.
+
+const SYNC_GROUPS = {
+  sleepChart: 'recovery',
+  hrvChart: 'recovery',
+  rhrChart: 'recovery',
+  stressChart: 'recovery',
+  stepsChart: 'recovery',
+  loadChart: 'load',
+  loadRatioChart: 'load',
+  trainingChart: 'load',
+};
+
+const syncState = { group: null, index: null };
+
+const syncTip = () => {
+  let el = document.getElementById('sync-tip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sync-tip';
+    el.className = 'sync-tip';
+    el.hidden = true;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  return el;
+};
+
+const syncTipHtml = (row) => {
+  const v = (x, unit = '', digits = 0) =>
+    x === null || x === undefined ? '缺失' : `${num(x, digits)}${unit}`;
+  const stage = (row.stage_completeness ?? 1) < 1
+    ? `<span class="sync-warn">分期缺 ${Math.round((1 - row.stage_completeness) * 100)}%</span>`
+    : '';
+  return `
+    <div class="sync-tip-head"><b>${row.date}</b>${stage}</div>
+    <dl class="sync-tip-grid">
+      <dt>睡眠</dt><dd>${hmin(row.sleep_total_min)}</dd>
+      <dt>HRV</dt><dd>${v(row.hrv_avg, ' ms')}</dd>
+      <dt>静息心率</dt><dd>${v(row.rhr, ' bpm')}</dd>
+      <dt>压力</dt><dd>${v(row.stress_avg, ' 分')}</dd>
+      <dt>步数</dt><dd>${v(row.steps, ' 步')}</dd>
+      <dt>负荷 短/长</dt><dd>${v(row.load_short, '', 1)} / ${v(row.load_long, '', 1)}</dd>
+    </dl>
+    <div class="sync-tip-foot">点击图表可在下方展开该日详情</div>`;
+};
+
+const placeSyncTip = (event) => {
+  const el = syncTip();
+  const native = event?.native;
+  if (!native) return;
+  const pad = 14;
+  const { innerWidth: vw, innerHeight: vh } = window;
+  const rect = el.getBoundingClientRect();
+  let x = native.clientX + pad;
+  let y = native.clientY + pad;
+  if (x + rect.width > vw - 8) x = native.clientX - rect.width - pad;
+  if (y + rect.height > vh - 8) y = native.clientY - rect.height - pad;
+  el.style.left = `${Math.max(8, x)}px`;
+  el.style.top = `${Math.max(8, y)}px`;
+};
+
+let syncFrame = 0;
+const refreshSyncCharts = () => {
+  if (syncFrame) return;
+  syncFrame = requestAnimationFrame(() => {
+    syncFrame = 0;
+    for (const id of Object.keys(charts)) {
+      if (charts[id].$syncGroup === syncState.group) charts[id].update('none');
+    }
+  });
+};
+
+const setSyncHover = (group, index, event) => {
+  const el = syncTip();
+  if (index === null || index === undefined) {
+    if (syncState.index !== null || !el.hidden) {
+      syncState.group = null;
+      syncState.index = null;
+      el.hidden = true;
+      refreshSyncCharts();
+    }
+    return;
+  }
+  const row = state.rangeRows[index];
+  if (!row) return;
+  const changed = syncState.index !== index || syncState.group !== group;
+  syncState.group = group;
+  syncState.index = index;
+  el.innerHTML = syncTipHtml(row);
+  el.hidden = false;
+  placeSyncTip(event);
+  if (changed) refreshSyncCharts();
+};
+
+// vertical crosshair drawn on every chart of the hovered group
+const crosshairPlugin = {
+  id: 'syncCrosshair',
+  afterDatasetsDraw(chart) {
+    if (syncState.index === null) return;
+    if (!chart.$syncGroup || chart.$syncGroup !== syncState.group) return;
+    const { ctx, chartArea, scales } = chart;
+    if (!scales.x || !chartArea) return;
+    if (syncState.index >= scales.x.max) return;
+    const x = scales.x.getPixelForValue(syncState.index);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(226,232,240,0.45)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+
+const syncInteraction = (group) => ({
+  onHover: (event, elements) => {
+    const idx = elements.length ? elements[0].index : null;
+    setSyncHover(group, idx, event);
+  },
+  onClick: (_event, elements) => {
+    if (!elements.length) return;
+    const row = state.rangeRows[elements[0].index];
+    if (!row) return;
+    state.selectedDate = row.date;
+    renderHeatmap();
+    renderDayDetail();
+    const box = document.getElementById('day-detail');
+    if (box && !box.hidden) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
+});
+
+Chart.register(crosshairPlugin);
+
 const makeChart = (id, config) => {
   if (charts[id]) charts[id].destroy();
   const canvas = document.getElementById(id);
-  charts[id] = new Chart(canvas, config);
-  return charts[id];
+  const group = SYNC_GROUPS[id];
+  if (group) {
+    config.options = { ...(config.options || {}), ...syncInteraction(group) };
+  }
+  const chart = new Chart(canvas, config);
+  chart.$syncGroup = group || null;
+  charts[id] = chart;
+  if (group && !canvas.$syncBound) {
+    canvas.$syncBound = true;
+    canvas.addEventListener('mouseleave', () => setSyncHover(group, null));
+    canvas.addEventListener('blur', () => setSyncHover(group, null));
+  }
+  return chart;
 };
 
 const round1 = (v) => Math.round(v * 10) / 10;
@@ -226,7 +378,32 @@ const direction = (delta, tolPct = 0.05) => {
   return { glyph: '▼', text: '偏低', cls: 'down' };
 };
 
-const sparkline = (values, color) => {
+// Per-metric polarity: which direction is "better" for this person's own
+// baseline. Load and steps are deliberately neutral — a high value is neither
+// good nor bad without context, so they never get a warning colour.
+const POLARITY = {
+  sleep_total_min: 'up',
+  sleep_score: 'up',
+  hrv_avg: 'up',
+  rhr: 'down',
+  stress_avg: 'down',
+  load_short: null,
+  steps: null,
+};
+
+// Deviation tone: amber when the deviation is in the unfavourable direction,
+// green when it is favourable, muted when flat / unknown. Never red: a single
+// day outside the personal baseline is not an alarm.
+const deviationTone = (key, deltaPct) => {
+  const polarity = POLARITY[key];
+  if (polarity == null || deltaPct == null) return 'neutral';
+  if (Math.abs(deltaPct) < 5) return 'flat';
+  const favourable = polarity === 'up' ? deltaPct > 0 : deltaPct < 0;
+  return favourable ? 'good' : 'warn';
+};
+
+// generic sparkline over a bare value array (body composition card)
+const seriesSparkline = (values, color) => {
   const pts = values.filter((v) => v !== null && v !== undefined).slice(-30);
   if (pts.length < 3) return '';
   const min = Math.min(...pts);
@@ -234,11 +411,69 @@ const sparkline = (values, color) => {
   const span = max - min || 1;
   const step = 100 / (pts.length - 1);
   const d = pts
-    .map((v, i) => `${(i * step).toFixed(1)},${(18 - ((v - min) / span) * 16).toFixed(1)}`)
+    .map((v, i) => `${(i * step).toFixed(1)},${(16 - ((v - min) / span) * 13).toFixed(1)}`)
     .join(' ');
   return `<svg class="spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
     <polyline points="${d}" fill="none" stroke="${color}" stroke-width="1.3" vector-effect="non-scaling-stroke" />
   </svg>`;
+};
+
+// 7-day sparkline anchored at the latest data point, so the card always shows
+// "where does today sit within the past week" regardless of the range filter.
+const sparkline = (rows, key, color, tone) => {
+  const tail = rows.slice(-7);
+  if (tail.length < 2) return '';
+  const vals = tail.map((r) => (r[key] == null ? null : r[key]));
+  const present = vals.filter((v) => v != null);
+  if (present.length < 2) return '';
+  const min = Math.min(...present);
+  const max = Math.max(...present);
+  const span = max - min || 1;
+  const step = 100 / Math.max(1, vals.length - 1);
+  const pts = [];
+  vals.forEach((v, i) => {
+    if (v == null) return;
+    pts.push(`${(i * step).toFixed(1)},${(16 - ((v - min) / span) * 13).toFixed(1)}`);
+  });
+  const lastX = (vals.length - 1) * step;
+  const lastV = tail.at(-1)?.[key];
+  const lastY = lastV == null ? null : 16 - ((lastV - min) / span) * 13;
+  return `<svg class="spark spark-${tone}" viewBox="0 0 100 20" preserveAspectRatio="none"
+      role="img" aria-label="最近 7 天${key === 'steps' ? '步数' : '走势'}微型趋势">
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.3"
+      vector-effect="non-scaling-stroke" />
+    ${
+      lastY == null
+        ? ''
+        : `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="1.6" fill="${color}" />`
+    }
+  </svg>`;
+};
+
+// Bullet bar: single day / 7-day mean / 28-day baseline on one scale.
+const bulletBar = (m, value, v7, v28) => {
+  const pts = [value, v7, v28].filter((v) => v != null);
+  if (pts.length < 2) return '';
+  const lo = Math.min(...pts);
+  const hi = Math.max(...pts);
+  const pad = (hi - lo) * 0.35 || Math.abs(hi) * 0.08 || 1;
+  const domainLo = lo - pad;
+  const domainHi = hi + pad;
+  const pos = (v) => Math.max(0, Math.min(100, ((v - domainLo) / (domainHi - domainLo)) * 100));
+  const label = [
+    v28 != null ? `28 天基线 ${m.fmt(v28)}` : null,
+    v7 != null ? `7 天均值 ${m.fmt(v7)}` : null,
+    value != null ? `单日 ${m.fmt(value)}` : null,
+  ]
+    .filter(Boolean)
+    .join('，');
+  return `<span class="bullet" role="img" aria-label="${label}"
+      title="${label}">
+    <span class="bullet-track" aria-hidden="true"></span>
+    ${v28 != null ? `<span class="bullet-tick base" style="left:${pos(v28).toFixed(1)}%" aria-hidden="true"></span>` : ''}
+    ${v7 != null ? `<span class="bullet-tick week" style="left:${pos(v7).toFixed(1)}%" aria-hidden="true"></span>` : ''}
+    ${value != null ? `<span class="bullet-dot" style="left:${pos(value).toFixed(1)}%" aria-hidden="true"></span>` : ''}
+  </span>`;
 };
 
 const buildKpis = () => {
@@ -249,26 +484,42 @@ const buildKpis = () => {
     const latest = d.latest[m.key] || {};
     const v7 = seriesAt(m.key, 'mean_7d', latest.date || latestDate);
     const v28 = seriesAt(m.key, 'mean_28d', latest.date || latestDate);
-    const d28 = v28 !== null && latest.value !== null ? latest.value - v28 : null;
+    // steps are a cumulative daily counter and the latest day may still be
+    // partial, so its delta is taken from the 7-day mean instead of a single
+    // day that could read as a 97% collapse.
+    const basis = m.key === 'steps' ? v7 : latest.value;
+    const d28 = v28 !== null && basis !== null ? basis - v28 : null;
+    const pct = v28 ? (d28 / v28) * 100 : null;
     const dir = m.key === 'sleep_score' ? null : direction(d28, (v28 || 1) * 0.05);
+    const tone = deviationTone(m.key, pct);
     const inRange = validAvg(state.rangeRows.map((r) => r[m.key]));
     const rangeNote = state.customRange
       ? `${state.rangeRows.length} 天均值 ${m.fmt(inRange)}`
       : state.range >= 365
         ? `全部均值 ${m.fmt(inRange)}`
         : `${state.range} 天均值 ${m.fmt(inRange)}`;
+    const toneVar =
+      tone === 'good' ? C.green : tone === 'warn' ? C.amber : tone === 'flat' ? C.muted : C.slate;
     return `
-      <article class="kpi">
+      <article class="kpi kpi-${tone}">
         <span class="value">${m.fmt(latest.value)}</span>
         <span class="label">${m.label}${m.key === 'steps' ? ` · ${rangeNote}` : ''}</span>
         <span class="kpi-line"><b>单日</b>（${latest.date || latestDate}）</span>
         <span class="kpi-line">7 天均值 ${m.fmt(v7)} · 28 天基线 ${m.fmt(v28)}</span>
         ${
           dir
-            ? `<span class="kpi-line dir ${dir.cls}">${dir.glyph} ${dir.text} ${d28 === null ? '' : num(Math.abs(d28), 1) + ' ' + m.unit}</span>`
+            ? `<span class="kpi-line dir ${tone}">${dir.glyph} ${dir.text}${
+                d28 === null
+                  ? ''
+                  : ` ${num(Math.abs(d28), m.key === 'steps' ? 0 : 1)}${m.unit ? ' ' + m.unit : ''}（${pct > 0 ? '+' : ''}${pct.toFixed(0)}%）`
+              }<span class="dir-basis">${
+                m.key === 'steps' ? ' · 7 天均值 vs 基线' : ' · 单日 vs 基线'
+              }</span></span>`
             : ''
         }
-        ${sparkline(state.rangeRows.map((r) => r[m.key]), C.accent)}
+        ${bulletBar(m, latest.value, v7, v28)}
+        ${sparkline(state.data.daily, m.key, toneVar, tone)}
+        <span class="spark-note">最近 7 天</span>
       </article>`;
   });
   const box = document.getElementById('kpis');
@@ -302,6 +553,63 @@ const lineDataset = (label, accessor, color, extra = {}) => ({
   spanGaps: false,
   ...extra,
 });
+
+// Trailing 28-day mean ± 1 SD, drawn as a shaded corridor behind a series so
+// that a point outside the person's own normal band is visible at a glance.
+// Fewer than 14 observations in the window yields no band (not a zero band).
+const baselineBand = (values, window = 28, minObs = 14) => {
+  const upper = [];
+  const lower = [];
+  for (let i = 0; i < values.length; i++) {
+    const w = values
+      .slice(Math.max(0, i - window + 1), i + 1)
+      .filter((v) => v !== null && v !== undefined);
+    if (w.length < minObs) {
+      upper.push(null);
+      lower.push(null);
+      continue;
+    }
+    const mean = w.reduce((a, b) => a + b, 0) / w.length;
+    const sd = Math.sqrt(w.reduce((a, b) => a + (b - mean) ** 2, 0) / (w.length - 1));
+    upper.push(round1(mean + sd));
+    lower.push(round1(mean - sd));
+  }
+  return { upper, lower };
+};
+
+const bandUpper = (upper, label) => ({
+  label,
+  data: upper,
+  type: 'line',
+  borderWidth: 0,
+  pointRadius: 0,
+  pointHoverRadius: 0,
+  fill: '+1',
+  backgroundColor: 'rgba(148,163,184,0.13)',
+});
+
+const bandLower = (lower) => ({
+  label: '',
+  data: lower,
+  type: 'line',
+  borderWidth: 0,
+  pointRadius: 0,
+  pointHoverRadius: 0,
+  fill: false,
+});
+
+// The corridor always uses the full history (trailing 28 days), then is sliced
+// to the visible window — otherwise a 7-day view could never show a 28-day band.
+const corridorDatasets = (rows, key) => {
+  const all = state.data.daily;
+  const start = all.indexOf(rows[0]);
+  if (start < 0 || !rows.length) return [];
+  const full = baselineBand(all.map((r) => r[key]));
+  const upper = full.upper.slice(start, start + rows.length);
+  const lower = full.lower.slice(start, start + rows.length);
+  if (!upper.some((v) => v != null)) return [];
+  return [bandUpper(upper, '基线走廊 ±1 SD'), bandLower(lower)];
+};
 
 const baseScales = (unit, stacked = false) => ({
   x: {
@@ -349,7 +657,12 @@ const withLegend = (opts, show = true) => ({
     legend: {
       display: show,
       position: 'bottom',
-      labels: { boxWidth: 10, usePointStyle: true, padding: 12 },
+      labels: {
+        boxWidth: 10,
+        usePointStyle: true,
+        padding: 12,
+        filter: (item) => !!(item.text && item.text.trim()),
+      },
     },
   },
 });
@@ -433,6 +746,24 @@ const heightM = () => (state.data.profile?.height_cm || 186) / 100;
 const bmiOf = (kg) =>
   kg == null || !heightM() ? null : Math.round((kg / heightM() ** 2) * 10) / 10;
 
+const renderProfilePills = () => {
+  const box = document.getElementById('header-meta');
+  if (!box) return;
+  const h = state.data.profile?.height_cm ?? 186;
+  const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
+  const last = rows.at(-1);
+  const bmi = last ? bmiOf(last.weight_kg) : null;
+  const latest = state.data.daily?.at(-1)?.date;
+  box.innerHTML = [
+    `<span class="pill-meta">身高 ${h} cm</span>`,
+    last ? `<span class="pill-meta">体重 ${num(last.weight_kg, 1)} kg</span>` : '',
+    bmi != null ? `<span class="pill-meta">BMI ${num(bmi, 1)}</span>` : '',
+    latest ? `<span class="pill-meta">数据至 ${latest}</span>` : '',
+  ]
+    .filter(Boolean)
+    .join('');
+};
+
 const renderProfile = () => {
   const box = document.getElementById('profile-card');
   if (!box) return;
@@ -456,6 +787,143 @@ const renderProfile = () => {
       <span class="profile-value">${bmi == null ? '暂无数据' : num(bmi, 1)}<small>${bmi == null ? '' : ''}</small></span>
       <span class="profile-note">${bmi == null ? '需要有效体重' : `按身高 ${height} cm 计算`}</span>
     </div>`;
+};
+
+// ---------------------------------------------------- executive summary
+// Four cards answering: current state vs baseline / what is trending /
+// what looks unusual / what to verify next. Everything is computed from the
+// payload — no narrative is invented when the data cannot support it.
+
+const meanSd = (values) => {
+  const v = values.filter((x) => x !== null && x !== undefined);
+  if (v.length < 2) return { mean: null, sd: null, n: v.length };
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  const sd = Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length - 1));
+  return { mean, sd, n: v.length };
+};
+
+const pctDelta = (value, base) =>
+  value == null || base == null || base === 0 ? null : ((value - base) / base) * 100;
+
+const execStateCard = () => {
+  const d = state.data;
+  const rows = d.daily;
+  const last = rows.at(-1);
+  if (!last) return { title: '近期状态 vs 基线', body: '暂无数据', tone: 'muted' };
+  const specs = [
+    ['sleep_total_min', '睡眠', true],
+    ['hrv_avg', 'HRV', true],
+    ['rhr', '静息心率', false],
+    ['stress_avg', '压力', false],
+  ];
+  const parts = [];
+  let good = 0;
+  let bad = 0;
+  for (const [key, label, higherIsBetter] of specs) {
+    const s = d.series[key];
+    if (!s) continue;
+    const idx = rows.findIndex((r) => r.date === last.date);
+    const base = s.mean_28d?.[idx];
+    const value = last[key];
+    if (value == null || base == null) continue;
+    const pct = pctDelta(value, base);
+    if (pct == null) continue;
+    const better = higherIsBetter ? pct > 0 : pct < 0;
+    const near = Math.abs(pct) < 3;
+    if (near) {
+      parts.push(`${label}持平`);
+    } else {
+      parts.push(`${label}${pct > 0 ? '偏高' : '偏低'}${Math.abs(pct).toFixed(0)}%`);
+      if (better) good += 1;
+      else bad += 1;
+    }
+  }
+  if (!parts.length) return { title: '近期状态 vs 基线', body: '基线样本不足（需 20 天以上）', tone: 'muted' };
+  const tone = bad === 0 ? 'good' : good >= bad ? 'neutral' : 'warn';
+  const lead =
+    bad === 0
+      ? '整体平稳'
+      : good >= bad
+        ? '多数指标在基线附近'
+        : '有指标明显偏离基线';
+  return { title: '近期状态 vs 基线', body: `${lead}：${parts.join(' · ')}`, tone };
+};
+
+const execTrendCard = () => {
+  const hs = (state.data.insights?.hypotheses || []).slice();
+  if (!hs.length) return { title: '持续变化的指标', body: '暂无足够数据', tone: 'muted' };
+  const scale = { sleep_total_min: 60, hrv_avg: 5, rhr: 2, stress_avg: 5 };
+  hs.sort((a, b) => Math.abs(b.delta) / (scale[b.metric] || 1) - Math.abs(a.delta) / (scale[a.metric] || 1));
+  const top = hs.slice(0, 2).map((h) => {
+    const dir = h.delta > 0 ? '↑' : '↓';
+    const unit = h.metric === 'sleep_total_min' ? 'min' : h.unit;
+    return `${h.label} ${dir}${Math.abs(h.delta).toFixed(1)} ${unit}`;
+  });
+  return {
+    title: '持续变化的指标',
+    body: `近 7 天 vs 前 28 天：${top.join(' · ')}`,
+    tone: 'neutral',
+  };
+};
+
+const execAnomalyCard = () => {
+  const rows = state.data.daily;
+  if (rows.length < 30) return { title: '值得观察的异常', body: '历史不足 30 天，暂不扫描', tone: 'muted' };
+  const window = rows.slice(-14);
+  const specs = [
+    ['sleep_total_min', '睡眠'],
+    ['hrv_avg', 'HRV'],
+    ['rhr', '静息心率'],
+    ['stress_avg', '压力'],
+    ['steps', '步数'],
+  ];
+  const flags = [];
+  for (const [key, label] of specs) {
+    const all = rows.map((r) => r[key]);
+    const start = rows.length - 14 - 28;
+    const baseVals = all.slice(Math.max(0, start), rows.length - 14);
+    const { mean, sd } = meanSd(baseVals);
+    if (mean == null || !sd) continue;
+    window.forEach((r, i) => {
+      const v = r[key];
+      if (v == null) return;
+      const z = (v - mean) / sd;
+      if (Math.abs(z) >= 1.5) {
+        flags.push({ date: r.date, label, z, value: v });
+      }
+    });
+  }
+  if (!flags.length) return { title: '值得观察的异常', body: '最近 14 天各指标均在个人 ±1.5 SD 内', tone: 'good' };
+  flags.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
+  const top = flags.slice(0, 2).map((f) => `${f.date.slice(5)} ${f.label} ${f.z > 0 ? '+' : ''}${f.z.toFixed(1)} SD`);
+  return { title: '值得观察的异常', body: `最近 14 天：${top.join(' · ')}`, tone: 'warn' };
+};
+
+const execNextCard = () => {
+  const cs = (state.data.correlations || []).filter((c) => c.r != null);
+  if (!cs.length) return { title: '下一步验证', body: '相关性样本不足', tone: 'muted' };
+  cs.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+  const c = cs[0];
+  return {
+    title: '下一步验证',
+    body: `${c.label}：r=${c.r.toFixed(2)}（95% CI ${c.ci_low.toFixed(2)}~${c.ci_high.toFixed(2)}，n=${c.n}）。相关不等于因果，可在下方切换滞后天数复看。`,
+    tone: 'neutral',
+  };
+};
+
+const renderExecutiveSummary = () => {
+  const box = document.getElementById('exec-grid');
+  if (!box) return;
+  const cards = [execStateCard(), execTrendCard(), execAnomalyCard(), execNextCard()];
+  box.innerHTML = cards
+    .map(
+      (c) => `
+      <div class="exec-card ${c.tone}">
+        <span class="exec-title">${c.title}</span>
+        <p class="exec-body">${c.body}</p>
+      </div>`
+    )
+    .join('');
 };
 
 const renderBodyMetrics = () => {
@@ -491,7 +959,7 @@ const renderBodyMetrics = () => {
         <span class="metric-name">${label}${derived}</span>
         <span class="metric-value">${num(values[idx], digits)}<small>${unit}</small></span>
         <span class="metric-meta">${rows[idx].date}${delta === null ? '' : ` · 较上次 ${delta > 0 ? '+' : ''}${num(delta, digits === 0 ? 0 : 1)}`}</span>
-        ${sparkline(values, key === 'body_fat_pct' ? C.amber : C.accent)}
+        ${seriesSparkline(values, key === 'body_fat_pct' ? C.amber : C.accent)}
       </div>`);
   }
   const last = rows[rows.length - 1];
@@ -847,13 +1315,16 @@ const renderCharts = () => {
   renderStepsChart();
   renderLoadCharts();
   renderTrainingChart();
-  renderProfile();
+  renderProfilePills();
+  renderExecutiveSummary();
   renderBodyCharts();
   renderCorrChart();
+  renderCorrBuckets();
   renderCorrStats();
   renderHeatmap();
   renderDayDetail();
   renderDailyTable();
+  renderQuality();
   renderCoverage();
   renderStatus();
 };
@@ -906,10 +1377,8 @@ const renderHrvChart = () => {
       data: {
         labels: state.rangeRows.map(shortDate),
         datasets: [
-          lineDataset('单日 HRV', (r) => r.hrv_avg, C.accent, {
-            fill: true,
-            backgroundColor: 'rgba(34,211,238,0.10)',
-          }),
+          ...corridorDatasets(state.rangeRows, 'hrv_avg'),
+          lineDataset('单日 HRV', (r) => r.hrv_avg, C.accent),
           lineDataset('7 天均值', () => null, '#e2e8f0', {
             borderWidth: 1.4,
             data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
@@ -940,10 +1409,8 @@ const renderRhrChart = () => {
       data: {
         labels: state.rangeRows.map(shortDate),
         datasets: [
-          lineDataset('单日', (r) => r.rhr, C.accent, {
-            fill: true,
-            backgroundColor: 'rgba(34,211,238,0.08)',
-          }),
+          ...corridorDatasets(state.rangeRows, 'rhr'),
+          lineDataset('单日', (r) => r.rhr, C.accent),
           {
             label: '7 天均值',
             data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
@@ -969,10 +1436,8 @@ const renderStressChart = () => {
       data: {
         labels: state.rangeRows.map(shortDate),
         datasets: [
-          lineDataset('平均压力', (r) => r.stress_avg, C.accent, {
-            fill: true,
-            backgroundColor: 'rgba(34,211,238,0.08)',
-          }),
+          ...corridorDatasets(state.rangeRows, 'stress_avg'),
+          lineDataset('平均压力', (r) => r.stress_avg, C.accent),
           {
             label: '7 天均值',
             data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
@@ -997,6 +1462,7 @@ const renderStepsChart = () => {
       data: {
         labels: state.rangeRows.map(shortDate),
         datasets: [
+          ...corridorDatasets(state.rangeRows, 'steps'),
           {
             label: '步数',
             data: state.rangeRows.map((r) => r.steps),
@@ -1125,6 +1591,103 @@ const pearsonJs = (pairs) => {
   return { r, n, lo: unz(z - 1.96 * se), hi: unz(z + 1.96 * se) };
 };
 
+
+// Quantile buckets: a global Pearson r can hide a threshold effect, so the same
+// pairs are split by tercile of X (P25 / P75) and Y is compared across groups.
+// This is still a descriptive description of *this* window's sample — the
+// cut-points are this person's own quantiles, never population thresholds.
+const quantile = (sorted, q) => {
+  if (!sorted.length) return null;
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  const next = sorted[base + 1];
+  if (next === undefined) return sorted[base];
+  return sorted[base] + rest * (next - sorted[base]);
+};
+
+const bucketStats = (pairs) => {
+  if (pairs.length < 12) return { reason: '样本不足 12 对，暂不分档' };
+  const xs = pairs.map((p) => p.x).slice().sort((a, b) => a - b);
+  const p25 = quantile(xs, 0.25);
+  const p75 = quantile(xs, 0.75);
+  if (p75 - p25 < 1e-9) return { reason: '当前窗口内自变量几乎不变，无法分档' };
+  const defs = [
+    { key: 'low', label: '低位组', rule: `< P25`, test: (p) => p.x < p25 },
+    { key: 'mid', label: '常态组', rule: 'P25–P75', test: (p) => p.x >= p25 && p.x <= p75 },
+    { key: 'high', label: '高位组', rule: '> P75', test: (p) => p.x > p75 },
+  ];
+  const groups = defs.map((d) => {
+    const ys = pairs.filter(d.test).map((p) => p.y).sort((a, b) => a - b);
+    const n = ys.length;
+    const mean = n ? ys.reduce((a, b) => a + b, 0) / n : null;
+    return { ...d, n, mean, median: n ? quantile(ys, 0.5) : null };
+  });
+  const lo = groups[0];
+  const hi = groups[2];
+  const deltaMean = lo.mean != null && hi.mean != null ? hi.mean - lo.mean : null;
+  const deltaMedian =
+    lo.median != null && hi.median != null ? hi.median - lo.median : null;
+  return { p25, p75, groups, deltaMean, deltaMedian };
+};
+
+const renderCorrBuckets = () => {
+  const box = document.getElementById('corr-buckets');
+  if (!box) return;
+  const { def, pairs } = corrPairs();
+  const b = bucketStats(pairs);
+  const sign = (v) => (v > 0 ? '+' : '');
+  const fx = (v) => (v == null ? '—' : num(v, 1));
+  const fy = (v) => (v == null ? '—' : num(v, 1));
+
+  if (b.reason) {
+    box.innerHTML = `
+      <div class="bucket-head"><h4>分位数对比</h4></div>
+      <p class="bucket-empty">${b.reason}</p>`;
+    return;
+  }
+
+  const means = b.groups.map((g) => g.mean).filter((v) => v != null);
+  const lo = Math.min(...means);
+  const hi = Math.max(...means);
+  const span = hi - lo || 1;
+  const bars = b.groups
+    .map((g) => {
+      const w = g.mean == null ? 0 : 18 + ((g.mean - lo) / span) * 82;
+      return `<div class="bucket-row">
+        <span class="bucket-label">${g.label}<small>${g.rule}</small></span>
+        <span class="bucket-bar"><i class="b-${g.key}" style="width:${w.toFixed(1)}%"></i></span>
+        <span class="bucket-val">${fy(g.mean)}<small>n=${g.n}</small></span>
+      </div>`;
+    })
+    .join('');
+
+  const lead =
+    b.deltaMean == null
+      ? '分档样本不足以比较。'
+      : `当${def.label.split('→')[0].trim()}处于最低 25%（< ${fx(b.p25)} ${def.xu}）时，${def.label.split('→')[1].trim()} 均值为 ${fy(b.groups[0].mean)} ${def.yu}；高于 75%（> ${fx(b.p75)} ${def.xu}）时为 ${fy(b.groups[2].mean)} ${def.yu}，相差 ${sign(b.deltaMean)}${fx(b.deltaMean)} ${def.yu}${
+          b.deltaMedian == null ? '' : `（中位数差 ${sign(b.deltaMedian)}${fx(b.deltaMedian)} ${def.yu}）`
+        }。`;
+
+  box.innerHTML = `
+    <div class="bucket-head">
+      <h4>分位数对比</h4>
+      <span class="hint">分位点取自当前窗口样本（滞后 ${state.corrLag} 天）</span>
+    </div>
+    <p class="bucket-lead">${lead}</p>
+    <div class="bucket-bars">${bars}</div>
+    <table class="coverage bucket-table">
+      <thead><tr><th>组</th><th>n</th><th>${def.yu} 均值</th><th>中位数</th></tr></thead>
+      <tbody>${b.groups
+        .map(
+          (g) => `<tr><td>${g.label}（${g.rule}）</td><td class="num">${g.n}</td>
+            <td class="num">${fy(g.mean)}</td><td class="num">${fy(g.median)}</td></tr>`
+        )
+        .join('')}</tbody>
+    </table>
+    <p class="bucket-note">分档只说明「本窗口内 X 高低两端的 Y 是否不同」，不构成阈值建议；样本少或存在趋势时结论不稳，切换时间范围复看。</p>`;
+};
+
 const renderCorrChart = () => {
   const { def, pairs } = corrPairs();
   const st = pearsonJs(pairs);
@@ -1241,6 +1804,9 @@ const renderHeatmap = () => {
   const nums = values.filter((v) => v !== null && v !== undefined);
   const lo = Math.min(...nums), hi = Math.max(...nums);
   const defRank = (v) => (v === null || v === undefined ? 0 : (v - lo) / (hi - lo || 1));
+  // Monday-first weekday index, used to pad each month's grid so the same
+  // weekday always sits in the same column across months.
+  const weekday = (date) => (new Date(date + 'T00:00:00').getDay() + 6) % 7;
 
   const months = new Map();
   for (const r of all) {
@@ -1249,29 +1815,84 @@ const renderHeatmap = () => {
     if (!months.has(monthKey)) months.set(monthKey, []);
     months.get(monthKey).push(r);
   }
-  container.innerHTML = [...months.entries()]
+  const monthBlocks = [...months.entries()]
     .map(([month, rows]) => {
-      const cells = rows
-        .map((r) => {
-          const v = r[state.heat];
-          const ratio = defRank(v);
-          const hasData = v !== null && v !== undefined;
-          return `<button type="button" class="hcell${hasData ? '' : ' nodata'}${r.date === selectedDate() ? ' sel' : ''}"
-            data-date="${r.date}" style="--v:${ratio}"
-            aria-label="${r.date} ${m.label} ${hasData ? m.fmt(v) : '无数据'}">${r.date.slice(8)}</button>`;
-        })
-        .join('');
-      return `<div class="hmonth"><div class="hmonth-title">${month}</div><div class="hgrid">${cells}</div></div>`;
+      const pad = weekday(rows[0].date);
+      const cells =
+        Array.from({ length: pad }, () => '<span class="hblank" aria-hidden="true"></span>').join('') +
+        rows
+          .map((r) => {
+            const v = r[state.heat];
+            const ratio = defRank(v);
+            const hasData = v !== null && v !== undefined;
+            return `<button type="button" class="hcell${hasData ? '' : ' nodata'}${r.date === selectedDate() ? ' sel' : ''}"
+              data-date="${r.date}" style="--v:${ratio}"
+              aria-label="${r.date} ${m.label} ${hasData ? m.fmt(v) : '无数据'}"
+              title="${r.date} · ${hasData ? m.fmt(v) : '无数据'}">${Number(r.date.slice(8))}</button>`;
+          })
+          .join('');
+      return `<div class="hmonth">
+        <div class="hmonth-title">${month}</div>
+        <div class="hweek" aria-hidden="true">${['一', '二', '三', '四', '五', '六', '日']
+          .map((d) => `<span>${d}</span>`)
+          .join('')}</div>
+        <div class="hgrid">${cells}</div>
+      </div>`;
     })
     .join('');
 
-  const legend = document.createElement('div');
-  legend.className = 'heat-legend';
-  legend.innerHTML = `<span>${m.unit || m.label}</span><span class="bar"><i></i></span><span style="text-align:right">${nums.length ? (hi >= 1000 ? `${num(lo)}–${num(hi)}` : `${num(lo, 1)}–${num(hi, 1)}`) : '—'}</span>`;
-  container.append(legend);
+  const span = nums.length
+    ? hi >= 1000
+      ? `${num(lo)} – ${num(hi)}`
+      : `${num(lo, 1)} – ${num(hi, 1)}`
+    : '—';
+  const legend = `<div class="heat-legend">
+    <span class="heat-legend-unit">${m.label}（${m.unit || '值'}）</span>
+    <span class="heat-legend-scale" aria-hidden="true"><i class="lo"></i><i class="mid"></i><i class="hi"></i></span>
+    <span class="heat-legend-span">${span}</span>
+    <span class="heat-legend-gap"><i class="nodata-swatch" aria-hidden="true"></i>无数据（不是 0）</span>
+  </div>`;
+
+  container.innerHTML = `<div class="heat-months">${monthBlocks}</div>${legend}`;
 };
 
 const selectedDate = () => state.selectedDate || null;
+
+
+// ±3 day mini context: training / sleep / recovery side by side, so a spike in
+// one metric can be read against what happened on the neighbouring days.
+const contextTable = (date) => {
+  const rows = state.data.daily;
+  const acts = state.data.activities_recent || [];
+  const cells = [];
+  for (let d = -3; d <= 3; d++) {
+    const day = addDays(date, d);
+    const r = rows.find((x) => x.date === day);
+    const sport = acts
+      .filter((a) => a.date === day)
+      .map((a) => `${a.sport}${a.distance_km ? ` ${num(a.distance_km, 1)}km` : ''}`)
+      .join('、');
+    const v = (x, digits = 0) => (x == null ? '缺失' : num(x, digits));
+    cells.push(`<tr class="${d === 0 ? 'ctx-today' : ''}">
+      <td class="ctx-date">${day.slice(5)}${d === 0 ? ' <span class="ctx-mark">当天</span>' : ''}</td>
+      <td>${hmin(r?.sleep_total_min)}</td>
+      <td>${v(r?.hrv_avg)}</td>
+      <td>${v(r?.rhr)}</td>
+      <td>${v(r?.stress_avg)}</td>
+      <td>${v(r?.steps)}</td>
+      <td>${r?.load_ratio == null ? '缺失' : num(r.load_ratio, 2)}</td>
+      <td class="ctx-sport">${sport || '—'}</td>
+    </tr>`);
+  }
+  return `<div class="ctx-wrap">
+    <div class="ctx-head"><b>前后 3 天上下文</b>
+      <span class="hint">睡眠=醒来日 · 其余为自然日 · 缺失不补 0</span></div>
+    <div class="table-wrap"><table class="coverage ctx-table">
+      <thead><tr><th>日期</th><th>睡眠</th><th>HRV</th><th>静息</th><th>压力</th><th>步数</th><th>负荷比</th><th>训练</th></tr></thead>
+      <tbody>${cells.join('')}</tbody>
+    </table></div>
+  </div>`;
+};
 
 const renderDayDetail = () => {
   const box = document.getElementById('day-detail');
@@ -1304,7 +1925,8 @@ const renderDayDetail = () => {
         ${acts.length ? acts.map((a) => `<span class="tag">${a.date} ${a.sport}${a.distance_km ? ` ${num(a.distance_km, 2)} km` : ''}${a.duration_min ? ` ${num(a.duration_min)} min` : ''}</span>`).join('') : '无记录（或超出近 90 天范围）'}
       </div>
       <div><b>状态</b> ${row.stage_completeness < 1 ? `睡眠分期完整性 ${Math.round(row.stage_completeness * 100)}%（缺失段按缺失显示）` : '分期完整'}</div>
-    </div>`;
+    </div>
+    ${contextTable(date)}`;
   document.getElementById('dd-close').onclick = () => {
     state.selectedDate = null;
     renderDayDetail();
@@ -1422,6 +2044,15 @@ const renderDailyTable = () => {
   // scrape HRV deviation from series for display
   const allIdx = (r) => state.data.daily.indexOf(r);
   const dev = (r) => state.data.series.hrv.deviation[allIdx(r)];
+  // trailing 28-day SD of HRV, so a deviation can be expressed in SD units
+  // (same ±1.5 SD rule as the executive summary, not an invented threshold)
+  const band = baselineBand(state.data.daily.map((r) => r.hrv_avg));
+  const hrvSd = (r) => {
+    const i = allIdx(r);
+    if (i < 0 || band.upper[i] == null || band.lower[i] == null) return null;
+    const sd = (band.upper[i] - band.lower[i]) / 2;
+    return sd > 0 ? sd : null;
+  };
 
   document.getElementById('daily-table').innerHTML = `
     <thead><tr>${DAILY_COLS.map(([, t]) => `<th>${t}</th>`).join('')}</tr></thead>
@@ -1439,8 +2070,27 @@ const renderDailyTable = () => {
             load_short: r.load_short ?? '—', load_long: r.load_long ?? '—',
             load_ratio: r.load_ratio ?? '—',
           };
-          return `<tr><td>${vals.date}</td>${DAILY_COLS.slice(1)
-            .map(([k]) => `<td class="num">${vals[k]}</td>`)
+          const sd = hrvSd(r);
+          const d = dev(r);
+          const z = sd != null && d != null ? d / sd : null;
+          const hrvCls =
+            z == null ? '' : z <= -1.5 ? ' cell-warn' : z >= 1.5 ? ' cell-good' : '';
+          const ratio = r.load_ratio;
+          const loadCls =
+            ratio == null ? '' : ratio > 1.2 ? ' cell-warn' : ratio < 0.8 ? ' cell-dim' : '';
+          const cellCls = (k) =>
+            k === 'deviation_hrv' ? hrvCls : k === 'load_ratio' ? loadCls : '';
+          const cellTitle = (k) =>
+            k === 'deviation_hrv' && z != null
+              ? ` title="相对 28 天基线的 ${z > 0 ? '+' : ''}${z.toFixed(1)} SD"`
+              : k === 'load_ratio' && r.load_comment
+                ? ` title="${r.load_comment}"`
+                : '';
+          return `<tr><td class="col-date">${vals.date}</td>${DAILY_COLS.slice(1)
+            .map(
+              ([k]) =>
+                `<td class="num${cellCls(k)}"${cellTitle(k)}>${vals[k]}</td>`
+            )
             .join('')}</tr>`;
         })
         .join('')}
@@ -1664,11 +2314,18 @@ const applyRange = (n) => {
     b.classList.toggle('active', active);
     b.setAttribute('aria-pressed', String(active));
   });
-  document.getElementById('range-label').textContent = state.customRange
-    ? `时间范围：${state.customRange.start} → ${state.customRange.end}`
+  const label = state.customRange
+    ? `${state.customRange.start} → ${state.customRange.end}`
     : n === 0
-      ? '时间范围：全部'
-      : `时间范围：最近 ${n} 天`;
+      ? '全部历史'
+      : `最近 ${n} 天`;
+  const rangeLabel = document.getElementById('range-label');
+  if (rangeLabel) rangeLabel.textContent = `时间范围：${label}`;
+  const windowLabel = document.getElementById('window-label');
+  if (windowLabel) {
+    windowLabel.innerHTML = `<span class="wl-prefix">当前窗口：</span>${label}`;
+  }
+  document.getElementById('sticky-bar')?.classList.toggle('is-custom', !!state.customRange);
   renderCharts();
 };
 
@@ -1683,6 +2340,37 @@ const showFatal = (message) => {
     <div class="kpi"><span class="value">!</span>
       <span class="label">数据加载失败</span>
       <span class="sub">${message}</span></div>`;
+};
+
+
+// Section nav: highlight the section currently under the sticky bar.
+const initSectionSpy = () => {
+  const links = [...document.querySelectorAll('.section-nav a[href^="#"]')];
+  if (!links.length) return;
+  const targets = links
+    .map((a) => ({ link: a, section: document.querySelector(a.getAttribute('href')) }))
+    .filter((t) => t.section);
+  let frame = 0;
+  const update = () => {
+    frame = 0;
+    const line = (document.getElementById('sticky-bar')?.getBoundingClientRect().bottom || 0) + 24;
+    let current = targets[0];
+    for (const t of targets) {
+      if (t.section.getBoundingClientRect().top <= line) current = t;
+    }
+    for (const t of targets) {
+      if (t === current) t.link.setAttribute('aria-current', 'true');
+      else t.link.removeAttribute('aria-current');
+    }
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    },
+    { passive: true }
+  );
+  update();
 };
 
 const init = async () => {
@@ -1829,7 +2517,13 @@ const init = async () => {
       b.classList.remove('active');
       b.setAttribute('aria-pressed', 'false');
     });
-    document.getElementById('range-label').textContent = `时间范围：${start} → ${end}`;
+    const rangeLabel = document.getElementById('range-label');
+    if (rangeLabel) rangeLabel.textContent = `时间范围：${start} → ${end}`;
+    const windowLabel = document.getElementById('window-label');
+    if (windowLabel) {
+      windowLabel.innerHTML = `<span class="wl-prefix">当前窗口：</span>${start} → ${end}`;
+    }
+    document.getElementById('sticky-bar')?.classList.add('is-custom');
     renderCharts();
   });
 
@@ -1850,6 +2544,7 @@ const init = async () => {
 
   wireTables();
   applyRange(90);
+  initSectionSpy();
 
   // phones start with the compact daily table (5 core columns)
   if (window.matchMedia('(max-width: 767px)').matches) {
@@ -1865,4 +2560,7 @@ const init = async () => {
   });
 };
 
-init().catch((error) => showFatal('初始化失败：' + error.message));
+init().catch((error) => {
+  console.error(error);
+  showFatal('初始化失败：' + error.message);
+});
