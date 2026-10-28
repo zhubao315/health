@@ -355,62 +355,101 @@ const withLegend = (opts, show = true) => ({
 });
 
 // ------------------------------------------------- body composition (scale)
-const bodyLatest = (s) => {
-  for (let i = s.values.length - 1; i >= 0; i--) {
-    if (s.values[i] !== null && s.values[i] !== undefined) {
-      return { value: s.values[i], date: s.dates[i], i };
-    }
+// Every body view follows the global range selector: the presets filter by
+// calendar days (7/30/90/365/all) and the custom range filters by its dates.
+
+const bodyAnchor = () => {
+  const lastDaily = state.rangeRows.at(-1)?.date;
+  const lastBody = state.data.body?.at(-1)?.date;
+  if (!lastDaily) return lastBody;
+  if (!lastBody) return lastDaily;
+  return lastDaily > lastBody ? lastDaily : lastBody;
+};
+
+const bodyRows = () => {
+  const rows = state.data.body || [];
+  if (state.customRange) {
+    return rows.filter(
+      (r) => r.date >= state.customRange.start && r.date <= state.customRange.end
+    );
   }
-  return null;
+  if (state.range === 0) return rows;
+  const anchor = bodyAnchor();
+  if (!anchor) return rows;
+  const start = new Date(new Date(anchor + 'T00:00:00').getTime() - (state.range - 1) * 86400000);
+  const startISO = start.toISOString().slice(0, 10);
+  return rows.filter((r) => r.date >= startISO);
+};
+
+const rolling7 = (values, minObs = 4) =>
+  values.map((_, i) => {
+    const w = values
+      .slice(Math.max(0, i - 6), i + 1)
+      .filter((v) => v !== null && v !== undefined);
+    return w.length >= minObs
+      ? Math.round((w.reduce((a, b) => a + b, 0) / w.length) * 10) / 10
+      : null;
+  });
+
+const bodySeries = (key) => {
+  const rows = bodyRows();
+  const labels = rows.map((r) => r.date);
+  const values = rows.map((r) => (r[key] == null ? null : r[key]));
+  return { rows, labels, values, mean7: rolling7(values) };
 };
 
 const renderBodyKpis = () => {
   const box = document.getElementById('body-kpis');
   if (!box) return;
+  const rows = bodyRows();
+  if (!rows.length) {
+    box.innerHTML = '';
+    return;
+  }
   const parts = [];
   for (const [key, label, unit, digits] of [
     ['weight_kg', '体重', 'kg', 1],
     ['body_fat_pct', '体脂率', '%', 1],
     ['visceral_fat', '内脏脂肪', '级', 0],
   ]) {
-    const series = state.data.series[key];
-    const latest = series?.dates ? bodyLatest(series) : null;
-    let value = latest?.value;
-    let date = latest?.date;
-    if (key === 'visceral_fat') {
-      const row = [...(state.data.body || [])].reverse().find((r) => r.visceral_fat != null);
-      value = row?.visceral_fat;
-      date = row?.date;
+    let last = null;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i][key] != null) {
+        last = { value: rows[i][key], date: rows[i].date, i };
+        break;
+      }
     }
-    if (value === null || value === undefined) continue;
-    const mean7 = series?.mean_7d?.[latest?.i] ?? null;
-    const delta = mean7 !== null ? value - mean7 : null;
+    if (!last) continue;
+    const values = rows.map((r) => (r[key] == null ? null : r[key]));
+    const m7 = rolling7(values)[last.i];
+    const delta = m7 === null ? null : last.value - m7;
     parts.push(`
       <span class="item">
-        <span class="value">${num(value, digits)}</span>
-        <span class="label">${label} ${unit} · ${date || '—'}</span>
-        ${delta === null ? '' : `<span class="delta">较近 7 次 ${delta > 0 ? '+' : ''}${num(delta, 1)}</span>`}
+        <span class="value">${num(last.value, digits)}</span>
+        <span class="label">${label} ${unit} · ${last.date}</span>
+        ${delta === null ? '' : `<span class="delta">较区间内近 7 次 ${delta > 0 ? '+' : ''}${num(delta, 1)}</span>`}
       </span>`);
   }
-  const last = state.data.body?.[state.data.body.length - 1];
-  if (last) {
-    const days = Math.round(
-      (Date.now() - new Date(last.date + 'T00:00:00').getTime()) / 86400000
+  const last = rows[rows.length - 1];
+  const days = Math.round(
+    (Date.now() - new Date(last.date + 'T00:00:00').getTime()) / 86400000
+  );
+  if (days >= 0 && days <= 400) {
+    parts.push(
+      `<span class="item"><span class="label">区间内最后称重 ${days === 0 ? '今天' : days + ' 天前'}</span></span>`
     );
-    if (days >= 0 && days <= 400) {
-      parts.push(
-        `<span class="item"><span class="label">距上次称重 ${days === 0 ? '今天' : days + ' 天'}</span></span>`
-      );
-    }
   }
   box.innerHTML = parts.join('');
-  renderBodyYears();
 };
 
 const renderBodyYears = () => {
   const box = document.getElementById('body-years');
-  const rows = state.data.body || [];
-  if (!box || !rows.length) return;
+  const rows = bodyRows();
+  if (!box) return;
+  if (!rows.length) {
+    box.innerHTML = '';
+    return;
+  }
   const byYear = new Map();
   for (const r of rows) {
     const y = r.date.slice(0, 4);
@@ -433,13 +472,12 @@ const renderBodyYears = () => {
     <table class="coverage table-inline body-year-table">
       <thead><tr><th>年份</th><th class="num">称重次数</th><th class="num">体重均值 kg</th><th class="num">体脂均值 %</th></tr></thead>
       <tbody>${body}</tbody>
-      <caption>只统计当年实际称重记录；「—」表示当年没有体脂数据（只测了体重）</caption>
+      <caption>只统计当前时间范围内的称重记录；「—」表示当年没有体脂数据（只测了体重）</caption>
     </table>`;
 };
 
-// weight x body-fat phase plot: is the change fat or lean mass?
 const renderBodyScatter = () => {
-  const rows = (state.data.body || []).filter(
+  const rows = bodyRows().filter(
     (r) => r.weight_kg != null && r.body_fat_pct != null
   );
   if (rows.length < 4) return;
@@ -483,9 +521,9 @@ const renderBodyScatter = () => {
   });
 };
 
-// week-over-week weight change, paired against the last weigh-in ~30 days back
+// week-over-week weight change, paired against the last weigh-in 21-90 days back
 const weightRateSeries = () => {
-  const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
+  const rows = bodyRows().filter((r) => r.weight_kg != null);
   const out = { labels: [], values: [] };
   for (let i = 0; i < rows.length; i++) {
     const cur = rows[i];
@@ -539,17 +577,50 @@ const renderBodyRate = () => {
   });
 };
 
+const destroyBodyCharts = () => {
+  for (const id of ['weightChart', 'bodyFatChart', 'bodyScatterChart', 'weightRateChart']) {
+    if (charts[id]) {
+      charts[id].destroy();
+      delete charts[id];
+    }
+  }
+};
+
 const renderBodyCharts = () => {
-  const w = state.data.series?.weight_kg;
-  const f = state.data.series?.body_fat_pct;
-  if (!w?.dates?.length) return;
+  const empty = document.getElementById('body-empty');
+  const grid = document.querySelector('#body-card .body-charts');
+  const rows = bodyRows();
+  const enough = rows.length >= 2;
+  // a single weigh-in still gives a valid latest value, just no trend
+  if (empty) {
+    empty.hidden = enough;
+    empty.textContent =
+      rows.length === 0
+        ? '当前时间范围内没有称重记录。切换到更长的时间范围，或下次称重后会自动出现。'
+        : '当前时间范围内只有 1 次称重，不足以画趋势；最新一次已显示在上方。';
+  }
+  if (grid) grid.hidden = !enough;
+  if (!rows.length) {
+    destroyBodyCharts();
+    document.getElementById('body-kpis').innerHTML = '';
+    document.getElementById('body-years').innerHTML = '';
+    return;
+  }
   renderBodyKpis();
+  if (!enough) {
+    destroyBodyCharts();
+    document.getElementById('body-years').innerHTML = '';
+    return;
+  }
+
+  const w = bodySeries('weight_kg');
+  const f = bodySeries('body_fat_pct');
   makeChart(
     'weightChart',
     withLegend({
       type: 'line',
       data: {
-        labels: w.dates,
+        labels: w.labels,
         datasets: [
           lineDataset('体重', () => null, C.accent, {
             data: w.values,
@@ -558,7 +629,7 @@ const renderBodyCharts = () => {
             borderWidth: 1.4,
           }),
           lineDataset('近 7 次均值', () => null, C.line, {
-            data: w.mean_7d,
+            data: w.mean7,
             borderWidth: 1.2,
           }),
         ],
@@ -571,7 +642,7 @@ const renderBodyCharts = () => {
     withLegend({
       type: 'line',
       data: {
-        labels: f.dates,
+        labels: f.labels,
         datasets: [
           lineDataset('体脂率', () => null, C.amber, {
             data: f.values,
@@ -580,7 +651,7 @@ const renderBodyCharts = () => {
             borderWidth: 1.4,
           }),
           lineDataset('近 7 次均值', () => null, C.line, {
-            data: f.mean_7d,
+            data: f.mean7,
             borderWidth: 1.2,
           }),
         ],
@@ -590,6 +661,7 @@ const renderBodyCharts = () => {
   );
   renderBodyScatter();
   renderBodyRate();
+  renderBodyYears();
 };
 
 const renderCharts = () => {
