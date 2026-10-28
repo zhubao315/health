@@ -415,12 +415,47 @@ const BODY_METRICS = [
 ];
 
 const metricValue = (row, key) => {
+  if (key === 'bmi') {
+    // the scale also reports BMI; recompute from the profile height so there is
+    // exactly one source of truth (the two agree to within rounding)
+    return bmiOf(row.weight_kg);
+  }
   if (key === 'fat_mass') {
     return row.weight_kg != null && row.body_fat_pct != null
       ? Math.round(row.weight_kg * row.body_fat_pct) / 100
       : null;
   }
   return row[key];
+};
+
+// single BMI formula for the whole app: weight / height(m)^2, height from profile
+const heightM = () => (state.data.profile?.height_cm || 186) / 100;
+const bmiOf = (kg) =>
+  kg == null || !heightM() ? null : Math.round((kg / heightM() ** 2) * 10) / 10;
+
+const renderProfile = () => {
+  const box = document.getElementById('profile-card');
+  if (!box) return;
+  const height = state.data.profile?.height_cm ?? 186;
+  const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
+  const last = rows.at(-1) || null;
+  const bmi = last ? bmiOf(last.weight_kg) : null;
+  box.innerHTML = `
+    <div class="profile-main">
+      <span class="profile-label">身高</span>
+      <span class="profile-value">${height}<small>cm</small></span>
+      <span class="profile-note">固定档案值 · 用于 BMI 计算</span>
+    </div>
+    <div class="profile-item">
+      <span class="profile-label">体重</span>
+      <span class="profile-value">${last ? num(last.weight_kg, 1) : '暂无数据'}<small>${last ? 'kg' : ''}</small></span>
+      <span class="profile-note">${last ? last.date : '没有称重记录'}</span>
+    </div>
+    <div class="profile-item">
+      <span class="profile-label">BMI</span>
+      <span class="profile-value">${bmi == null ? '暂无数据' : num(bmi, 1)}<small>${bmi == null ? '' : ''}</small></span>
+      <span class="profile-note">${bmi == null ? '需要有效体重' : `按身高 ${height} cm 计算`}</span>
+    </div>`;
 };
 
 const renderBodyMetrics = () => {
@@ -812,6 +847,7 @@ const renderCharts = () => {
   renderStepsChart();
   renderLoadCharts();
   renderTrainingChart();
+  renderProfile();
   renderBodyCharts();
   renderCorrChart();
   renderCorrStats();

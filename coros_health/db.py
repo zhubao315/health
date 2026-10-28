@@ -685,6 +685,7 @@ def dashboard_payload(conn):
         "snapshot": snapshot,
         "correlations": corr,
         "body": body_rows,
+        "profile": get_profile(conn),
         "training": training_weekly(conn),
         "daily": rows,
         "activities_recent": recent_activities(conn, 90),
@@ -740,6 +741,21 @@ def training_weekly(conn):
             w[k] = round(w[k], 1)
         out.append(w)
     return out
+
+
+DEFAULT_PROFILE = {"height_cm": 186}
+
+
+def get_profile(conn):
+    """Personal basics that are not per-day measurements (currently height)."""
+    raw = get_meta(conn, "profile.height_cm")
+    try:
+        height = int(float(raw)) if raw is not None else DEFAULT_PROFILE["height_cm"]
+    except (TypeError, ValueError):
+        height = DEFAULT_PROFILE["height_cm"]
+    if not 100 <= height <= 250:
+        height = DEFAULT_PROFILE["height_cm"]
+    return {"height_cm": height}
 
 
 def recent_activities(conn, days=90):

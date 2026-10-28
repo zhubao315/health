@@ -428,6 +428,29 @@ class TestRecentActivities(DbFixture):
         self.assertNotIn("OLD", ids)
 
 
+class TestProfile(DbFixture):
+    def test_default_height_is_186(self):
+        conn = db.connect(self.path)
+        self.assertEqual(db.get_profile(conn), {"height_cm": 186})
+
+    def test_height_read_from_meta(self):
+        conn = db.connect(self.path)
+        db.set_meta(conn, "profile.height_cm", "182")
+        self.assertEqual(db.get_profile(conn)["height_cm"], 182)
+
+    def test_invalid_height_falls_back(self):
+        conn = db.connect(self.path)
+        for bad in ("abc", "12", "999"):
+            db.set_meta(conn, "profile.height_cm", bad)
+            self.assertEqual(db.get_profile(conn)["height_cm"], 186)
+
+    def test_payload_carries_profile(self):
+        conn = db.connect(self.path)
+        _seed_person(conn, "2026-01-01")
+        payload = db.dashboard_payload(conn)
+        self.assertEqual(payload["profile"]["height_cm"], 186)
+
+
 class TestPearsonWithCI(unittest.TestCase):
     def test_perfect_positive_ci_degenerates(self):
         r, n, lo, hi = db.pearson_with_ci(list(range(1, 9)), [2 * x for x in range(1, 9)])

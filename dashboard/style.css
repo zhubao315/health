@@ -1166,3 +1166,79 @@ h1 {
   font-size: 0.75rem;
   line-height: 1.6;
 }
+
+
+/* personal profile (fixed height + latest weight/BMI) */
+.profile-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.profile-main,
+.profile-item {
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--card);
+}
+
+.profile-main {
+  flex: 1.4 1 220px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 7%, var(--card)),
+    var(--card)
+  );
+}
+
+.profile-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-value {
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.profile-main .profile-value {
+  color: var(--accent);
+  font-size: 2.4rem;
+}
+
+.profile-value small {
+  margin-left: 0.2rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+
+.profile-note {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 560px) {
+  .profile-main,
+  .profile-item {
+    flex: 1 1 100%;
+  }
+
+  .profile-main .profile-value {
+    font-size: 2.1rem;
+  }
+}
