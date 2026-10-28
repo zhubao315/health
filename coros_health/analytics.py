@@ -87,6 +87,25 @@ def build(conn, write_metrics=True):
         "weekly_trend": metrics.rhr_trend_series(_column(rows, "rhr")),
     }
 
+    # body composition series (Yunmai) — measured on arbitrary days, so the
+    # rolling numbers are "last N weigh-ins", not last N calendar days
+    body_rows = [dict(r) for r in conn.execute("SELECT * FROM body ORDER BY date")]
+    body_dates = [r["date"] for r in body_rows]
+    for key, label, unit, digits in [
+        ("weight_kg", "体重", "kg", 1),
+        ("body_fat_pct", "体脂率", "%", 1),
+    ]:
+        values = _column(body_rows, key)
+        series[key] = {
+            "label": label,
+            "unit": unit,
+            "dates": body_dates,
+            "values": values,
+            "mean_7d": metrics.rolling_mean(values, 7, min_obs=4),
+            "mean_28d": metrics.rolling_mean(values, 28, min_obs=10),
+            "count": len([v for v in values if v is not None]),
+        }
+
     payload = {"series": series, "insights": insights(rows, dates, series)}
     payload["metrics_version"] = "1.0"
 

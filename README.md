@@ -90,6 +90,7 @@ flowchart LR
 | `data/stress_daily.csv` | 日平均压力（0–100 型分值）+ 放松/低/中/高压力时长（分钟） |
 | `data/load.csv` | 短期负荷、长期负荷（无量纲），负荷比（ratio），COROS 评语 |
 | `data/activities.csv` | 所有运动记录（运动类型、距离 km、时长 min、均心率 bpm、卡路里） |
+| `data/body.csv` | 体重与体成分（好轻体脂秤）：体重 kg、体脂率 %、BMI、肌肉率 %、水分率 %、骨量 kg、蛋白质 %、内脏脂肪等级、基础代谢 kcal、身体年龄 |
 | `data/hrv_series.csv.gz` | 睡眠期间原始 HRV 点（约 2 分钟一个点，最近 90 天起累积） |
 | `data/stress_series.csv.gz` | 原始压力序列（约 5 分钟一个点，最近 90 天起累积） |
 | `data/health.db` | 以上数据的 SQLite 版本，带 `daily` 视图；`snapshots` 表每日一行（`date` 主键、幂等），设备仅存 name/model |
@@ -116,6 +117,14 @@ flowchart LR
 | 负荷 / 负荷比 | 无量纲（COROS 算法分值） |
 | 距离 | km |
 | 卡路里 | kcal |
+
+### 体重与体成分（好轻 Yunmai）
+
+- 来源：好轻 App 云端（体脂秤），按**称重日**入库，一天多次称重取当天最后一次
+- 覆盖：2018-08 起，约 200+ 个称重日，不是每日连续数据
+- 体重、BMI、内脏脂肪等级基本每次都有；体脂率/肌肉率/水分/骨量/蛋白质/身体年龄在只测体重的日子为 **NULL**（不是 0）
+- 面板的「体重与体脂」卡片使用全部历史，**不跟随**上方 30/90/365 天范围；「近 7 次均值」按称重次数而非日历天
+- 重新导入：`python scripts/import_yunmai.py <rows.json>`（JSON 由好轻接口返回）
 
 ### 计算口径（单一来源 `coros_health/metrics.py` + `coros_health/db.py`）
 

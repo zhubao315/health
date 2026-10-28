@@ -329,6 +329,98 @@ const withLegend = (opts, show = true) => ({
   },
 });
 
+// ------------------------------------------------- body composition (scale)
+const bodyLatest = (s) => {
+  for (let i = s.values.length - 1; i >= 0; i--) {
+    if (s.values[i] !== null && s.values[i] !== undefined) {
+      return { value: s.values[i], date: s.dates[i], i };
+    }
+  }
+  return null;
+};
+
+const renderBodyKpis = () => {
+  const box = document.getElementById('body-kpis');
+  if (!box) return;
+  const parts = [];
+  for (const [key, label, unit, digits] of [
+    ['weight_kg', '体重', 'kg', 1],
+    ['body_fat_pct', '体脂率', '%', 1],
+    ['visceral_fat', '内脏脂肪', '级', 0],
+  ]) {
+    const series = state.data.series[key];
+    const latest = series?.dates ? bodyLatest(series) : null;
+    let value = latest?.value;
+    let date = latest?.date;
+    if (key === 'visceral_fat') {
+      const row = [...(state.data.body || [])].reverse().find((r) => r.visceral_fat != null);
+      value = row?.visceral_fat;
+      date = row?.date;
+    }
+    if (value === null || value === undefined) continue;
+    const mean7 = series?.mean_7d?.[latest?.i] ?? null;
+    const delta = mean7 !== null ? value - mean7 : null;
+    parts.push(`
+      <span class="item">
+        <span class="value">${num(value, digits)}</span>
+        <span class="label">${label} ${unit} · ${date || '—'}</span>
+        ${delta === null ? '' : `<span class="delta">较近 7 次 ${delta > 0 ? '+' : ''}${num(delta, 1)}</span>`}
+      </span>`);
+  }
+  box.innerHTML = parts.join('');
+};
+
+const renderBodyCharts = () => {
+  const w = state.data.series?.weight_kg;
+  const f = state.data.series?.body_fat_pct;
+  if (!w?.dates?.length) return;
+  renderBodyKpis();
+  makeChart(
+    'weightChart',
+    withLegend({
+      type: 'line',
+      data: {
+        labels: w.dates,
+        datasets: [
+          lineDataset('体重', () => null, C.accent, {
+            data: w.values,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            borderWidth: 1.4,
+          }),
+          lineDataset('近 7 次均值', () => null, C.line, {
+            data: w.mean_7d,
+            borderWidth: 1.2,
+          }),
+        ],
+      },
+      options: withLegend(chartOptions('kg'), true),
+    })
+  );
+  makeChart(
+    'bodyFatChart',
+    withLegend({
+      type: 'line',
+      data: {
+        labels: f.dates,
+        datasets: [
+          lineDataset('体脂率', () => null, C.amber, {
+            data: f.values,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            borderWidth: 1.4,
+          }),
+          lineDataset('近 7 次均值', () => null, C.line, {
+            data: f.mean_7d,
+            borderWidth: 1.2,
+          }),
+        ],
+      },
+      options: withLegend(chartOptions('%'), true),
+    })
+  );
+};
+
 const renderCharts = () => {
   state.rangeRows = filterRows();
   buildKpis();
@@ -338,6 +430,7 @@ const renderCharts = () => {
   renderStressChart();
   renderStepsChart();
   renderLoadCharts();
+  renderBodyCharts();
   renderCorrChart();
   renderCorrStats();
   renderHeatmap();
@@ -1070,6 +1163,18 @@ const renderChartTable = (id) => {
       ],
     },
   };
+  if (id === 'weightChart') {
+    const w = state.data.series.weight_kg;
+    const rows = w.dates.map((d, i) => [d, w.values[i], w.mean_7d?.[i] ?? '—']);
+    return `<table class="coverage table-inline">
+      <thead><tr><th>日期</th><th>体重 kg</th><th>近 7 次均值</th></tr></thead>
+      <tbody>${rows
+        .slice(-120)
+        .map((r) => `<tr>${r.map((v) => `<td>${v == null ? '缺失' : v}</td>`).join('')}</tr>`)
+        .join('')}</tbody>
+      <caption>${rows.length > 120 ? '仅显示最近 120 次称重' : `共 ${rows.length} 次称重`}</caption>
+    </table>`;
+  }
   const def = defs[id];
   if (!def) return '';
   const noteRow = id === 'sleepChart' && ((r.stage_completeness ?? 1) < 1)

@@ -159,9 +159,9 @@ def audit(conn, today=None):
 
     tables = {}
     pk_column = {**{t: "date" for t in [
-        "daily_health", "sleep", "hrv", "avg_hr", "rhr", "stress_daily", "load"
+        "daily_health", "sleep", "hrv", "avg_hr", "rhr", "stress_daily", "load", "body"
     ]}, "activities": "label_id"}
-    for table in ["daily_health", "sleep", "hrv", "avg_hr", "rhr", "stress_daily", "load", "activities"]:
+    for table in ["daily_health", "sleep", "hrv", "avg_hr", "rhr", "stress_daily", "load", "body", "activities"]:
         key = pk_column[table]
         r = conn.execute(
             f"SELECT COUNT(*) n, COUNT(DISTINCT {key}) d, MIN(date) a, MAX(date) b FROM {table}"

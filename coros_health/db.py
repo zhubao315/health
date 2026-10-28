@@ -67,6 +67,10 @@ TABLES = {
         "high_min",
     ],
     "load": ["date", "load_comment", "load_short", "load_long", "load_ratio"],
+    "body": [
+        "date", "measured_at", "weight_kg", "body_fat_pct", "bmi", "muscle_pct",
+        "water_pct", "bone_kg", "protein_pct", "visceral_fat", "bmr", "body_age",
+    ],
     "activities": [
         "label_id",
         "sport_type",
@@ -89,6 +93,9 @@ INT_TYPES = {
     "stress_avg",
     "sleep_score",
     "sleep_total_min",
+    "visceral_fat",
+    "bmr",
+    "body_age",
     "sleep_deep_min",
     "sleep_light_min",
     "sleep_rem_min",
@@ -122,7 +129,19 @@ INT_TYPES = {
     "avg_hr",
     "calories",
 }
-REAL_TYPES = {"load_ratio", "distance_km", "duration_min", "avg_speed_kmh"}
+REAL_TYPES = {
+    "load_ratio",
+    "distance_km",
+    "duration_min",
+    "avg_speed_kmh",
+    "weight_kg",
+    "body_fat_pct",
+    "bmi",
+    "muscle_pct",
+    "water_pct",
+    "bone_kg",
+    "protein_pct",
+}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS daily_health (
@@ -158,6 +177,11 @@ CREATE TABLE IF NOT EXISTS activities (
   location TEXT, distance_km REAL, duration_min REAL, avg_hr INTEGER,
   calories INTEGER, avg_speed_kmh REAL, avg_pace TEXT
 );
+CREATE TABLE IF NOT EXISTS body (
+  date TEXT PRIMARY KEY, measured_at TEXT, weight_kg REAL, body_fat_pct REAL,
+  bmi REAL, muscle_pct REAL, water_pct REAL, bone_kg REAL, protein_pct REAL,
+  visceral_fat INTEGER, bmr INTEGER, body_age INTEGER
+);
 CREATE TABLE IF NOT EXISTS snapshots (
   date TEXT PRIMARY KEY, fetched_at TEXT NOT NULL, fitness_json TEXT,
   recovery_json TEXT, devices_json TEXT
@@ -183,14 +207,17 @@ SELECT d.date,
        h.hrv_normal_high,
        a.avg_hr, a.min_hr, a.max_hr,
        r.rhr,
-       l.load_short, l.load_long, l.load_ratio, l.load_comment
+       l.load_short, l.load_long, l.load_ratio, l.load_comment,
+       b.weight_kg, b.body_fat_pct, b.bmi, b.muscle_pct, b.water_pct,
+       b.bone_kg, b.protein_pct, b.visceral_fat, b.bmr, b.body_age
 FROM daily_health d
 LEFT JOIN sleep s ON s.date = d.date
 LEFT JOIN hrv h ON h.date = d.date
 LEFT JOIN avg_hr a ON a.date = d.date
 LEFT JOIN rhr r ON r.date = d.date
 LEFT JOIN stress_daily st ON st.date = d.date
-LEFT JOIN load l ON l.date = d.date;
+LEFT JOIN load l ON l.date = d.date
+LEFT JOIN body b ON b.date = d.date;
 """
 
 # Old schema (fetched_at TEXT PRIMARY KEY) -> new schema (date PK, idempotent
@@ -623,6 +650,19 @@ def dashboard_payload(conn):
                 break
         latest[key] = {"value": value, "date": date}
 
+    body_rows = [
+        dict(r)
+        for r in conn.execute("SELECT * FROM body ORDER BY date")
+    ]
+
+    for key in ("weight_kg", "body_fat_pct", "bmi", "muscle_pct", "visceral_fat"):
+        value = date = None
+        for row in reversed(body_rows):
+            if row.get(key) is not None:
+                value, date = row[key], row["date"]
+                break
+        latest[key] = {"value": value, "date": date}
+
     snap = conn.execute(
         "SELECT * FROM snapshots ORDER BY date DESC LIMIT 1"
     ).fetchone()
@@ -644,6 +684,7 @@ def dashboard_payload(conn):
         "latest": latest,
         "snapshot": snapshot,
         "correlations": corr,
+        "body": body_rows,
         "daily": rows,
         "activities_recent": recent_activities(conn, 90),
         **analytics_blocks(conn),

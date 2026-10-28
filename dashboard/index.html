@@ -100,6 +100,22 @@
             <div class="data-table" id="table-sleepChart" hidden></div>
           </article>
 
+          <article class="card wide" id="body-card">
+            <div class="card-head">
+              <h3>体重与体脂</h3>
+              <span class="hint" id="body-hint">好轻体脂秤 · 按称重日记录（2018 起），不与上方时间范围联动</span>
+              <div class="card-tools">
+                <button type="button" class="tool" data-table-for="weightChart" aria-expanded="false">数据表</button>
+              </div>
+            </div>
+            <div class="body-kpis" id="body-kpis"></div>
+            <div class="chart-box"><canvas id="weightChart" role="img"
+                aria-label="体重随时间的走势，含最近 7 次称重的均值"></canvas></div>
+            <div class="chart-box"><canvas id="bodyFatChart" role="img"
+                aria-label="体脂率随时间的走势，含最近 7 次称重的均值"></canvas></div>
+            <div class="data-table" id="table-weightChart" hidden></div>
+          </article>
+
           <article class="card">
             <div class="card-head">
               <h3>夜间 HRV</h3>

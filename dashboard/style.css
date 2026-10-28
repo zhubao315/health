@@ -985,3 +985,41 @@ h1 {
     height: 220px;
   }
 }
+
+
+/* body composition (Yunmai scale) */
+.body-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.body-kpis .item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.body-kpis .value {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.body-kpis .label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.body-kpis .delta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+#body-card .chart-box + .chart-box {
+  margin-top: 0.6rem;
+}
