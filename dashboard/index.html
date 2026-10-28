@@ -112,7 +112,7 @@
                 <button type="button" class="tool" data-table-for="weightChart" aria-expanded="false">数据表</button>
               </div>
             </div>
-            <div class="body-kpis" id="body-kpis"></div>
+            <div class="body-metrics" id="body-metrics"></div>
             <p class="body-empty" id="body-empty" hidden>当前时间范围内没有称重记录。切换到更长的时间范围，或下次称重后会自动出现。</p>
             <div class="body-charts">
               <div class="chart-box"><canvas id="weightChart" role="img"
@@ -120,10 +120,13 @@
               <div class="chart-box"><canvas id="bodyFatChart" role="img"
                   aria-label="体脂率随时间的走势，含最近 7 次称重的均值"></canvas></div>
               <div class="chart-box"><canvas id="bodyScatterChart" role="img"
-                  aria-label="体重与体脂率的散点图，用于判断体重变化来自脂肪还是肌肉"></canvas></div>
+                  aria-label="BMI 与体脂率的散点图，按年份着色"></canvas></div>
               <div class="chart-box"><canvas id="weightRateChart" role="img"
                   aria-label="体重变化速率，按周计算，正值为增重"></canvas></div>
+              <div class="chart-box"><canvas id="bodyCompChart" role="img"
+                  aria-label="体重组成：脂肪量与去脂体重的堆叠面积图"></canvas></div>
             </div>
+            <p class="note body-comp-note">体重组成 = 脂肪量（体重 × 体脂率）+ 去脂体重（体重 − 脂肪量），两者均为<strong>计算值</strong>，不是设备直接测量；体水分、蛋白质、骨量与设备算法相关，未参与加总。</p>
             <div class="body-years" id="body-years"></div>
             <div class="data-table" id="table-weightChart" hidden></div>
           </article>
@@ -188,6 +191,18 @@
           <h2 id="training-title">训练与恢复</h2>
           <span class="hint">负荷与负荷比共用时间轴；不把单一比值当作受伤风险或医学警报</span>
         </div>
+        <article class="card wide">
+          <div class="card-head">
+            <h3>周训练量</h3>
+            <span class="hint">按自然周（周一起）聚合跑步与骑行；没有记录的周不会补 0</span>
+            <div class="card-tools">
+              <button type="button" class="tool" data-table-for="trainingChart" aria-expanded="false">数据表</button>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="trainingChart" role="img"
+              aria-label="每周跑步与骑行距离柱状图"></canvas></div>
+          <div class="data-table" id="table-trainingChart" hidden></div>
+        </article>
         <article class="card">
           <div class="card-head">
             <h3>训练负荷</h3>

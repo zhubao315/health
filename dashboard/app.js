@@ -398,48 +398,76 @@ const bodySeries = (key) => {
   return { rows, labels, values, mean7: rolling7(values) };
 };
 
-const renderBodyKpis = () => {
-  const box = document.getElementById('body-kpis');
+// body metric matrix: latest value, date, change vs the previous reading and a
+// mini trend. fat_mass is derived (weight x body-fat) and labelled as such.
+const BODY_METRICS = [
+  ['weight_kg', '体重', 'kg', 1],
+  ['bmi', 'BMI', '', 1],
+  ['body_fat_pct', '体脂率', '%', 1],
+  ['fat_mass', '脂肪量', 'kg', 1],
+  ['muscle_pct', '肌肉率', '%', 1],
+  ['water_pct', '水分率', '%', 1],
+  ['protein_pct', '蛋白质', '%', 1],
+  ['bone_kg', '骨量', 'kg', 1],
+  ['visceral_fat', '内脏脂肪', '级', 0],
+  ['bmr', '基础代谢', 'kcal', 0],
+  ['body_age', '身体年龄', '岁', 0],
+];
+
+const metricValue = (row, key) => {
+  if (key === 'fat_mass') {
+    return row.weight_kg != null && row.body_fat_pct != null
+      ? Math.round(row.weight_kg * row.body_fat_pct) / 100
+      : null;
+  }
+  return row[key];
+};
+
+const renderBodyMetrics = () => {
+  const box = document.getElementById('body-metrics');
   if (!box) return;
   const rows = bodyRows();
   if (!rows.length) {
     box.innerHTML = '';
     return;
   }
-  const parts = [];
-  for (const [key, label, unit, digits] of [
-    ['weight_kg', '体重', 'kg', 1],
-    ['body_fat_pct', '体脂率', '%', 1],
-    ['visceral_fat', '内脏脂肪', '级', 0],
-  ]) {
-    let last = null;
-    for (let i = rows.length - 1; i >= 0; i--) {
-      if (rows[i][key] != null) {
-        last = { value: rows[i][key], date: rows[i].date, i };
+  const cards = [];
+  for (const [key, label, unit, digits] of BODY_METRICS) {
+    const values = rows.map((r) => metricValue(r, key));
+    let idx = -1;
+    for (let i = values.length - 1; i >= 0; i--) {
+      if (values[i] !== null && values[i] !== undefined) {
+        idx = i;
         break;
       }
     }
-    if (!last) continue;
-    const values = rows.map((r) => (r[key] == null ? null : r[key]));
-    const m7 = rolling7(values)[last.i];
-    const delta = m7 === null ? null : last.value - m7;
-    parts.push(`
-      <span class="item">
-        <span class="value">${num(last.value, digits)}</span>
-        <span class="label">${label} ${unit} · ${last.date}</span>
-        ${delta === null ? '' : `<span class="delta">较区间内近 7 次 ${delta > 0 ? '+' : ''}${num(delta, 1)}</span>`}
-      </span>`);
+    if (idx < 0) continue;
+    let prev = null;
+    for (let i = idx - 1; i >= 0; i--) {
+      if (values[i] !== null && values[i] !== undefined) {
+        prev = values[i];
+        break;
+      }
+    }
+    const delta = prev === null ? null : values[idx] - prev;
+    const derived = key === 'fat_mass' ? ' <span class="derived">计算</span>' : '';
+    cards.push(`
+      <div class="metric-card">
+        <span class="metric-name">${label}${derived}</span>
+        <span class="metric-value">${num(values[idx], digits)}<small>${unit}</small></span>
+        <span class="metric-meta">${rows[idx].date}${delta === null ? '' : ` · 较上次 ${delta > 0 ? '+' : ''}${num(delta, digits === 0 ? 0 : 1)}`}</span>
+        ${sparkline(values, key === 'body_fat_pct' ? C.amber : C.accent)}
+      </div>`);
   }
   const last = rows[rows.length - 1];
   const days = Math.round(
     (Date.now() - new Date(last.date + 'T00:00:00').getTime()) / 86400000
   );
-  if (days >= 0 && days <= 400) {
-    parts.push(
-      `<span class="item"><span class="label">区间内最后称重 ${days === 0 ? '今天' : days + ' 天前'}</span></span>`
-    );
-  }
-  box.innerHTML = parts.join('');
+  const note =
+    days >= 0 && days <= 400
+      ? `<p class="metric-note">区间内最后一次称重：${last.date}（${days === 0 ? '今天' : days + ' 天前'}）</p>`
+      : '';
+  box.innerHTML = `<div class="metric-grid">${cards.join('')}</div>${note}`;
 };
 
 const renderBodyYears = () => {
@@ -478,14 +506,14 @@ const renderBodyYears = () => {
 
 const renderBodyScatter = () => {
   const rows = bodyRows().filter(
-    (r) => r.weight_kg != null && r.body_fat_pct != null
+    (r) => r.bmi != null && r.body_fat_pct != null
   );
   if (rows.length < 4) return;
   const byYear = new Map();
   for (const r of rows) {
     const y = r.date.slice(0, 4);
     if (!byYear.has(y)) byYear.set(y, []);
-    byYear.get(y).push({ x: r.weight_kg, y: r.body_fat_pct, date: r.date });
+    byYear.get(y).push({ x: r.bmi, y: r.body_fat_pct, date: r.date });
   }
   const palette = ['#0e7490', '#0891b2', '#22d3ee', '#7dd3fc', '#94a3b8',
     '#fbbf24', '#fb7185', '#34d399', '#60a5fa'];
@@ -509,12 +537,12 @@ const renderBodyScatter = () => {
         tooltip: {
           callbacks: {
             title: (items) => (items[0]?.raw?.date ? items[0].raw.date : ''),
-            label: (c) => `${c.dataset.label}: ${num(c.parsed.x, 1)} kg · ${num(c.parsed.y, 1)}%`,
+            label: (c) => `${c.dataset.label}: BMI ${num(c.parsed.x, 1)} · 体脂 ${num(c.parsed.y, 1)}%`,
           },
         },
       },
       scales: {
-        x: { title: { display: true, text: '体重 kg', color: C.muted }, grid: { color: C.grid } },
+        x: { title: { display: true, text: 'BMI', color: C.muted }, grid: { color: C.grid } },
         y: { title: { display: true, text: '体脂率 %', color: C.muted }, grid: { color: C.grid } },
       },
     },
@@ -577,13 +605,122 @@ const renderBodyRate = () => {
   });
 };
 
+const renderBodyComposition = () => {
+  const rows = bodyRows().filter(
+    (r) => r.weight_kg != null && r.body_fat_pct != null
+  );
+  if (rows.length < 2) return;
+  const fat = rows.map((r) => Math.round(r.weight_kg * r.body_fat_pct) / 100);
+  const lean = rows.map((r, i) => Math.round((r.weight_kg - fat[i]) * 10) / 10);
+  makeChart(
+    'bodyCompChart',
+    withLegend({
+      type: 'line',
+      data: {
+        labels: rows.map((r) => r.date),
+        datasets: [
+          {
+            label: '脂肪量 kg',
+            data: fat,
+            backgroundColor: 'rgba(251,191,36,0.42)',
+            borderColor: 'rgba(251,191,36,0.85)',
+            borderWidth: 1.2,
+            fill: true,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+          {
+            label: '去脂体重 kg',
+            data: lean,
+            backgroundColor: 'rgba(34,211,238,0.32)',
+            borderColor: 'rgba(34,211,238,0.85)',
+            borderWidth: 1.2,
+            fill: true,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+        ],
+      },
+      options: withLegend(chartOptions('kg'), true),
+    })
+  );
+};
+
 const destroyBodyCharts = () => {
-  for (const id of ['weightChart', 'bodyFatChart', 'bodyScatterChart', 'weightRateChart']) {
+  for (const id of ['weightChart', 'bodyFatChart', 'bodyScatterChart', 'weightRateChart', 'bodyCompChart']) {
     if (charts[id]) {
       charts[id].destroy();
       delete charts[id];
     }
   }
+};
+
+const rangeStartDate = () => {
+  if (state.customRange) return state.customRange.start;
+  if (state.range === 0) return null;
+  const anchor = state.rangeRows.at(-1)?.date;
+  if (!anchor) return null;
+  const d = new Date(
+    new Date(anchor + 'T00:00:00').getTime() - (state.range - 1) * 86400000
+  );
+  return d.toISOString().slice(0, 10);
+};
+
+const renderTrainingChart = () => {
+  const all = state.data.training || [];
+  const start = rangeStartDate();
+  const weeks = start ? all.filter((w) => w.week >= start) : all;
+  if (!weeks.length) return;
+  makeChart(
+    'trainingChart',
+    withLegend({
+      type: 'bar',
+      data: {
+        labels: weeks.map((w) => w.week.slice(5)),
+        datasets: [
+          {
+            label: '跑步 km',
+            data: weeks.map((w) => w.run_km),
+            backgroundColor: 'rgba(52,211,153,0.65)',
+            borderWidth: 0,
+          },
+          {
+            label: '骑行 km',
+            data: weeks.map((w) => w.ride_km),
+            backgroundColor: 'rgba(34,211,238,0.55)',
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: withLegend(
+        chartOptions('km', {
+          scales: {
+            ...baseScales('km'),
+            x: { ...baseScales('km').x, stacked: false },
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const w = weeks[items[0]?.dataIndex];
+                  return w ? `${w.week} 起这一周` : '';
+                },
+                afterBody: (items) => {
+                  const w = weeks[items[0]?.dataIndex];
+                  if (!w) return [];
+                  return [
+                    `跑步 ${w.runs} 次 · 骑行 ${w.rides} 次 · 徒步 ${w.hikes} 次`,
+                    `总时长 ${Math.round(w.minutes)} 分钟`,
+                  ];
+                },
+              },
+            },
+          },
+        }),
+        true
+      ),
+    })
+  );
 };
 
 const renderBodyCharts = () => {
@@ -602,11 +739,11 @@ const renderBodyCharts = () => {
   if (grid) grid.hidden = !enough;
   if (!rows.length) {
     destroyBodyCharts();
-    document.getElementById('body-kpis').innerHTML = '';
+    document.getElementById('body-metrics').innerHTML = '';
     document.getElementById('body-years').innerHTML = '';
     return;
   }
-  renderBodyKpis();
+  renderBodyMetrics();
   if (!enough) {
     destroyBodyCharts();
     document.getElementById('body-years').innerHTML = '';
@@ -661,6 +798,7 @@ const renderBodyCharts = () => {
   );
   renderBodyScatter();
   renderBodyRate();
+  renderBodyComposition();
   renderBodyYears();
 };
 
@@ -673,6 +811,7 @@ const renderCharts = () => {
   renderStressChart();
   renderStepsChart();
   renderLoadCharts();
+  renderTrainingChart();
   renderBodyCharts();
   renderCorrChart();
   renderCorrStats();
@@ -1406,6 +1545,19 @@ const renderChartTable = (id) => {
       ],
     },
   };
+  if (id === 'trainingChart') {
+    const start = rangeStartDate();
+    const weeks = (state.data.training || []).filter((w) => !start || w.week >= start);
+    return `<table class="coverage table-inline">
+      <thead><tr><th>周（周一）</th><th>跑步次</th><th>跑步 km</th><th>骑行次</th><th>骑行 km</th><th>总时长</th></tr></thead>
+      <tbody>${weeks
+        .slice(-120)
+        .reverse()
+        .map((w) => `<tr><td>${w.week}</td><td class="num">${w.runs}</td><td class="num">${num(w.run_km, 1)}</td><td class="num">${w.rides}</td><td class="num">${num(w.ride_km, 1)}</td><td class="num">${Math.round(w.minutes)} min</td></tr>`)
+        .join('')}</tbody>
+      <caption>共 ${weeks.length} 周；只列出当前时间范围内有记录的周</caption>
+    </table>`;
+  }
   if (id === 'weightChart') {
     const w = state.data.series.weight_kg;
     const rows = w.dates.map((d, i) => [d, w.values[i], w.mean_7d?.[i] ?? '—']);

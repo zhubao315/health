@@ -685,10 +685,61 @@ def dashboard_payload(conn):
         "snapshot": snapshot,
         "correlations": corr,
         "body": body_rows,
+        "training": training_weekly(conn),
         "daily": rows,
         "activities_recent": recent_activities(conn, 90),
         **analytics_blocks(conn),
     }
+
+
+def training_weekly(conn):
+    """Week-by-week training volume (Monday-anchored), all history.
+
+    Aggregated in SQLite because the payload only ships the last 90 days of
+    individual activities; the dashboard needs years of weekly buckets.
+    """
+    rows = conn.execute(
+        "SELECT date, sport, distance_km, duration_min FROM activities"
+    ).fetchall()
+    weeks = {}
+    for r in rows:
+        try:
+            d = datetime.date.fromisoformat(r["date"])
+        except (TypeError, ValueError):
+            continue
+        monday = (d - datetime.timedelta(days=d.weekday())).isoformat()
+        w = weeks.setdefault(
+            monday,
+            {
+                "week": monday,
+                "runs": 0,
+                "rides": 0,
+                "hikes": 0,
+                "run_km": 0.0,
+                "ride_km": 0.0,
+                "hike_km": 0.0,
+                "minutes": 0.0,
+            },
+        )
+        sport = (r["sport"] or "").lower()
+        km = r["distance_km"] or 0.0
+        if "run" in sport:
+            w["runs"] += 1
+            w["run_km"] += km
+        elif "cycl" in sport or "ride" in sport:
+            w["rides"] += 1
+            w["ride_km"] += km
+        elif "hike" in sport or "walk" in sport:
+            w["hikes"] += 1
+            w["hike_km"] += km
+        w["minutes"] += r["duration_min"] or 0.0
+    out = []
+    for key in sorted(weeks):
+        w = weeks[key]
+        for k in ("run_km", "ride_km", "hike_km", "minutes"):
+            w[k] = round(w[k], 1)
+        out.append(w)
+    return out
 
 
 def recent_activities(conn, days=90):
