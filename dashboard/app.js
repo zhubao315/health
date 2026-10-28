@@ -41,35 +41,106 @@ const showStaleBuildNotice = () => {
 
 // ------------------------------------------------------------------ helpers
 
+// Semantic palette (Tailwind 400/500 range). Every chart picks its colour from
+// here so a metric keeps the same hue everywhere: sleep is indigo, HRV emerald,
+// resting heart rate rose, stress amber, steps/load cyan.
 const C = {
-  accent: '#22d3ee',
-  accent2: '#0ea5e9',
-  red: '#fb7185',
-  amber: '#fbbf24',
+  cyan: '#22d3ee',
+  sky: '#38bdf8',
+  indigo: '#6366f1',
+  purple: '#a855f7',
+  rose: '#f43f5e',
+  emerald: '#10b981',
+  amber: '#f59e0b',
+  periwinkle: '#818cf8',
   slate: '#64748b',
-  green: '#34d399',
-  grid: '#1a2029',
   text: '#e6eaf0',
   muted: '#8b95a5',
+  grid: 'rgba(255, 255, 255, 0.05)',
   // aggregation lines stay neutral; series are separated by dash pattern too
-  line: '#e2e8f0',
+  line: '#c7d2fe',
   lineDim: '#7c8795',
+  // legacy aliases still referenced by a few call sites
+  accent: '#22d3ee',
+  accent2: '#38bdf8',
+  red: '#f43f5e',
+  ok: '#10b981',
+  warn: '#f59e0b',
+  green: '#10b981',
+};
+
+const MONO = "'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace";
+const AXIS_COLOR = '#64748b';
+
+// hex -> rgba, so gradients can reuse the palette without extra literals
+const hexA = (hex, alpha) => {
+  const h = String(hex).replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return `rgba(34, 211, 238, ${alpha})`;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
+// Vertical area gradient: 28% at the top edge of the plot area -> transparent at
+// the bottom. Scriptable so it survives resize (chartArea is unknown at config).
+const areaFill = (hex, top = 0.28, bottom = 0) => (context) => {
+  const { ctx, chartArea } = context.chart;
+  if (!chartArea) return hexA(hex, top);
+  const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+  g.addColorStop(0, hexA(hex, top));
+  g.addColorStop(1, hexA(hex, bottom));
+  return g;
+};
+
+// Vertical bar gradient: brighter at the top of each bar.
+const barFill = (hex, top = 0.95, bottom = 0.35) => (context) => {
+  // `parsed` lives on the scriptable context, not on the chart instance
+  const { ctx, chartArea } = context.chart;
+  if (!chartArea) return hexA(hex, top);
+  const y = context.parsed?.y ?? chartArea.bottom;
+  const g = ctx.createLinearGradient(0, y, 0, chartArea.bottom);
+  g.addColorStop(0, hexA(hex, top));
+  g.addColorStop(1, hexA(hex, bottom));
+  return g;
+};
+
+// Diagonal hatch for "measured nothing" days — a marker, never a zero value.
+const hatchPattern = (context, color = 'rgba(148, 163, 184, 0.5)') => {
+  const { ctx } = context.chart;
+  const size = 6;
+  const tile = document.createElement('canvas');
+  tile.width = size;
+  tile.height = size;
+  const t = tile.getContext('2d');
+  t.strokeStyle = color;
+  t.lineWidth = 1.2;
+  t.beginPath();
+  t.moveTo(-size, size);
+  t.lineTo(size, -size);
+  t.moveTo(0, size * 2);
+  t.lineTo(size * 2, 0);
+  t.stroke();
+  return ctx.createPattern(tile, 'repeat');
 };
 
 const chartDefaults = () => {
   Chart.defaults.color = C.muted;
-  Chart.defaults.borderColor = C.grid;
-  Chart.defaults.font.family =
-    "'Fira Sans', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif";
+  Chart.defaults.borderColor = 'transparent';
+  Chart.defaults.font.family = MONO;
   Chart.defaults.font.size = 11;
-  Chart.defaults.plugins.tooltip.backgroundColor = '#0d1116';
-  Chart.defaults.plugins.tooltip.borderColor = '#2b333d';
-  Chart.defaults.plugins.tooltip.borderWidth = 1;
-  Chart.defaults.plugins.tooltip.titleColor = C.text;
-  Chart.defaults.plugins.tooltip.bodyColor = C.muted;
-  Chart.defaults.plugins.tooltip.cornerRadius = 6;
-  Chart.defaults.plugins.tooltip.padding = 10;
-  Chart.defaults.plugins.tooltip.displayColors = false;
+  // Native canvas tooltips are replaced by the DOM card (#chart-tip).
+  Chart.defaults.plugins.tooltip.enabled = false;
+  Chart.defaults.plugins.tooltip.external = externalTooltip;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+  Chart.defaults.plugins.legend.labels.boxWidth = 6;
+  Chart.defaults.plugins.legend.labels.boxHeight = 6;
+  Chart.defaults.plugins.legend.labels.padding = 14;
+  Chart.defaults.plugins.legend.labels.color = C.muted;
+  Chart.defaults.plugins.legend.labels.font = { family: MONO, size: 11 };
+  Chart.defaults.elements.line.tension = 0.35;
+  Chart.defaults.elements.line.borderWidth = 2.2;
+  Chart.defaults.elements.point.hoverBorderWidth = 3;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     Chart.defaults.animation = false;
   }
@@ -77,10 +148,10 @@ const chartDefaults = () => {
 
 const charts = {};
 
-// --------------------------------------------- synced crosshair + day snapshot
-// Hovering any recovery/load chart highlights the same calendar day on every
-// chart in its group, and shows one context card with that day's snapshot.
-// The card is a convenience view only — it reads the same payload values.
+// ------------------------------------------- synced crosshair + glass tooltip
+// One DOM tooltip card serves every chart (Chart.js native canvas tooltips are
+// disabled). Hovering a daily chart also draws a glowing crosshair on its
+// siblings and highlights the same day's points on all of them.
 
 const SYNC_GROUPS = {
   sleepChart: 'recovery',
@@ -90,17 +161,22 @@ const SYNC_GROUPS = {
   stepsChart: 'recovery',
   loadChart: 'load',
   loadRatioChart: 'load',
-  trainingChart: 'load',
 };
 
 const syncState = { group: null, index: null };
 
-const syncTip = () => {
-  let el = document.getElementById('sync-tip');
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const weekdayOf = (iso) => {
+  const d = new Date(iso + 'T00:00:00');
+  return Number.isNaN(d.getTime()) ? '' : WEEKDAYS[d.getDay()];
+};
+
+const tipEl = () => {
+  let el = document.getElementById('chart-tip');
   if (!el) {
     el = document.createElement('div');
-    el.id = 'sync-tip';
-    el.className = 'sync-tip';
+    el.id = 'chart-tip';
+    el.className = 'chart-tip';
     el.hidden = true;
     el.setAttribute('role', 'status');
     el.setAttribute('aria-live', 'polite');
@@ -109,38 +185,162 @@ const syncTip = () => {
   return el;
 };
 
-const syncTipHtml = (row) => {
-  const v = (x, unit = '', digits = 0) =>
-    x === null || x === undefined ? '缺失' : `${num(x, digits)}${unit}`;
-  const stage = (row.stage_completeness ?? 1) < 1
-    ? `<span class="sync-warn">分期缺 ${Math.round((1 - row.stage_completeness) * 100)}%</span>`
-    : '';
-  return `
-    <div class="sync-tip-head"><b>${row.date}</b>${stage}</div>
-    <dl class="sync-tip-grid">
-      <dt>睡眠</dt><dd>${hmin(row.sleep_total_min)}</dd>
-      <dt>HRV</dt><dd>${v(row.hrv_avg, ' ms')}</dd>
-      <dt>静息心率</dt><dd>${v(row.rhr, ' bpm')}</dd>
-      <dt>压力</dt><dd>${v(row.stress_avg, ' 分')}</dd>
-      <dt>步数</dt><dd>${v(row.steps, ' 步')}</dd>
-      <dt>负荷 短/长</dt><dd>${v(row.load_short, '', 1)} / ${v(row.load_long, '', 1)}</dd>
-    </dl>
-    <div class="sync-tip-foot">点击图表可在下方展开该日详情</div>`;
+// dataset colours can be strings, arrays or scriptable functions
+const datasetColor = (chart, ds) => {
+  const raw = typeof ds.borderColor === 'function' ? ds.borderColor({ chart }) : ds.borderColor;
+  if (typeof raw === 'string') return raw;
+  if (Array.isArray(ds.backgroundColor) && typeof ds.backgroundColor[0] === 'string') {
+    return ds.backgroundColor[0];
+  }
+  return C.cyan;
 };
 
-const placeSyncTip = (event) => {
-  const el = syncTip();
-  const native = event?.native;
-  if (!native) return;
+const tipValue = (label, value, unit) => {
+  if (value === null || value === undefined) return '缺失';
+  if (unit === 'min' || /睡眠|时长|深睡|浅睡|REM|清醒/.test(label)) return hmin(value);
+  if (unit === 'km') return `${num(value, 1)} km`;
+  if (unit) return `${num(value, 1)} ${unit}`;
+  return num(value, 1);
+};
+
+const chartUnit = (chart) => chart.$unit || '';
+
+// baseline for the hovered index: an explicit 28-day line when the chart has
+// one, otherwise the centre of the ±1 SD corridor, otherwise nothing.
+const tipBaseline = (chart, index) => {
+  const ds = chart.data.datasets;
+  const line = ds.findIndex((d) => typeof d.label === 'string' && /28 天/.test(d.label));
+  if (line >= 0) {
+    const v = ds[line].data[index];
+    if (v != null) return { value: v, source: '28 天基线' };
+  }
+  const band = ds.findIndex((d) => typeof d.label === 'string' && /走廊/.test(d.label));
+  if (band >= 0) {
+    const up = ds[band].data[index];
+    const lo = ds[band + 1]?.data[index];
+    if (up != null && lo != null) {
+      return { value: (up + lo) / 2, sd: Math.abs(up - lo) / 2, source: '28 天基线' };
+    }
+  }
+  return null;
+};
+
+const chartTipHtml = (chart, index) => {
+  const iso = chart.$dates?.[index] || null;
+  const unit = chartUnit(chart);
+  const rows = [];
+  chart.data.datasets.forEach((ds, i) => {
+    if (!ds.label || /走廊|参考线|拟合/.test(ds.label)) return;
+    if (chart.getDatasetMeta(i).hidden) return;
+    const raw = ds.data[index];
+    const value = raw && typeof raw === 'object' ? raw.y : raw;
+    if (value === null || value === undefined) return;
+    rows.push({ label: ds.label, value, color: datasetColor(chart, ds) });
+  });
+  if (!rows.length) return '';
+
+  const base = tipBaseline(chart, index);
+  const primary = rows[0];
+  let deltaHtml = '';
+  let badge = '';
+  if (base && base.value) {
+    const diff = primary.value - base.value;
+    const pct = (diff / base.value) * 100;
+    const z = base.sd ? diff / base.sd : null;
+    deltaHtml = `<span class="tip-delta">${base.source} ${diff > 0 ? '+' : ''}${num(diff, 1)}${
+      unit ? ' ' + unit : ''
+    }（${pct > 0 ? '+' : ''}${pct.toFixed(0)}%）</span>`;
+    if (z != null && Math.abs(z) >= 1.5) {
+      badge = `<span class="tip-badge ${z > 0 ? 'up' : 'down'}">${z > 0 ? '+' : ''}${z.toFixed(1)} SD</span>`;
+    }
+  }
+
+  // other metrics of the same day, so the card is a snapshot, not a single line
+  const rowData = iso ? state.data.daily.find((r) => r.date === iso) : null;
+  const extra = typeof chart.$tipExtra === 'function' ? chart.$tipExtra(index) : null;
+  const snapshot = extra
+    ? extra.filter(Boolean).join(' · ')
+    : rowData
+    ? [
+        rowData.hrv_avg != null ? `HRV ${num(rowData.hrv_avg)}` : null,
+        rowData.rhr != null ? `静息 ${num(rowData.rhr)}` : null,
+        rowData.stress_avg != null ? `压力 ${num(rowData.stress_avg)}` : null,
+        rowData.load_ratio != null ? `负荷比 ${num(rowData.load_ratio, 2)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+
+  const head = iso
+    ? `<div class="tip-head">
+        <span class="tip-date">${iso.slice(5)}</span>
+        <span class="tip-wd">${weekdayOf(iso)}</span>
+        ${badge}
+      </div>`
+    : `<div class="tip-head"><span class="tip-date">${chart.data.labels[index] ?? ''}</span></div>`;
+
+  const body = rows
+    .map(
+      (r) => `<li>
+        <i class="tip-dot" style="--c:${r.color}"></i>
+        <span class="tip-name">${r.label}</span>
+        <b class="tip-val">${tipValue(r.label, r.value, unit)}</b>
+      </li>`
+    )
+    .join('');
+
+  // $tipExtra (e.g. weekly training counts) renders even without ISO dates;
+  // the day snapshot only makes sense on dated charts.
+  const snapText = extra
+    ? extra.filter(Boolean).join(' · ')
+    : snapshot && iso
+      ? snapshot
+      : '';
+  const footHtml =
+    deltaHtml || snapText
+      ? `<div class="tip-foot">${deltaHtml}${
+          snapText ? `<span class="tip-snapshot">${snapText}</span>` : ''
+        }</div>`
+      : '';
+  return `${head}<ul class="tip-rows">${body}</ul>${footHtml}`;
+};
+
+const positionTip = (el, chart, tooltip) => {
+  const rect = chart.canvas.getBoundingClientRect();
   const pad = 14;
-  const { innerWidth: vw, innerHeight: vh } = window;
-  const rect = el.getBoundingClientRect();
-  let x = native.clientX + pad;
-  let y = native.clientY + pad;
-  if (x + rect.width > vw - 8) x = native.clientX - rect.width - pad;
-  if (y + rect.height > vh - 8) y = native.clientY - rect.height - pad;
-  el.style.left = `${Math.max(8, x)}px`;
-  el.style.top = `${Math.max(8, y)}px`;
+  const x = rect.left + tooltip.caretX;
+  const y = rect.top + tooltip.caretY;
+  el.style.left = '0px';
+  el.style.top = '0px';
+  const size = el.getBoundingClientRect();
+  let left = x + pad;
+  let top = y + pad;
+  if (left + size.width > window.innerWidth - 10) left = x - size.width - pad;
+  if (top + size.height > window.innerHeight - 10) top = y - size.height - pad;
+  el.style.left = `${Math.max(10, left)}px`;
+  el.style.top = `${Math.max(10, top)}px`;
+};
+
+const externalTooltip = (context) => {
+  const { chart, tooltip } = context;
+  const el = tipEl();
+  if (!chart || !tooltip || tooltip.opacity === 0) {
+    el.hidden = true;
+    return;
+  }
+  const index = tooltip.dataPoints?.[0]?.dataIndex;
+  if (index === undefined || index === null) {
+    el.hidden = true;
+    return;
+  }
+  const html = chartTipHtml(chart, index);
+  if (!html) {
+    el.hidden = true;
+    return;
+  }
+  el.innerHTML = html;
+  el.hidden = false;
+  positionTip(el, chart, tooltip);
 };
 
 let syncFrame = 0;
@@ -154,29 +354,22 @@ const refreshSyncCharts = () => {
   });
 };
 
-const setSyncHover = (group, index, event) => {
-  const el = syncTip();
+const setSyncHover = (group, index) => {
   if (index === null || index === undefined) {
-    if (syncState.index !== null || !el.hidden) {
+    if (syncState.index !== null) {
       syncState.group = null;
       syncState.index = null;
-      el.hidden = true;
       refreshSyncCharts();
     }
     return;
   }
-  const row = state.rangeRows[index];
-  if (!row) return;
-  const changed = syncState.index !== index || syncState.group !== group;
+  if (syncState.index === index && syncState.group === group) return;
   syncState.group = group;
   syncState.index = index;
-  el.innerHTML = syncTipHtml(row);
-  el.hidden = false;
-  placeSyncTip(event);
-  if (changed) refreshSyncCharts();
+  refreshSyncCharts();
 };
 
-// vertical crosshair drawn on every chart of the hovered group
+// Glowing vertical crosshair + halo on the hovered value of every synced chart.
 const crosshairPlugin = {
   id: 'syncCrosshair',
   afterDatasetsDraw(chart) {
@@ -186,22 +379,45 @@ const crosshairPlugin = {
     if (!scales.x || !chartArea) return;
     if (syncState.index >= scales.x.max) return;
     const x = scales.x.getPixelForValue(syncState.index);
+    if (!Number.isFinite(x)) return;
+
     ctx.save();
-    ctx.strokeStyle = 'rgba(226,232,240,0.45)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
     ctx.beginPath();
     ctx.moveTo(x, chartArea.top);
     ctx.lineTo(x, chartArea.bottom);
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
+    ctx.shadowColor = 'rgba(34, 211, 238, 0.65)';
+    ctx.shadowBlur = 10;
     ctx.stroke();
     ctx.restore();
+
+    chart.data.datasets.forEach((ds, di) => {
+      if (!ds.label || /走廊|参考线|拟合|均值|基线/.test(ds.label)) return;
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      const el = meta.data[syncState.index];
+      if (!el || el.skip) return;
+      const color = datasetColor(chart, ds);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(el.x, el.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#07090d';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = hexA(color.startsWith('#') ? color : '#22d3ee', 0.8);
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    });
   },
 };
 
 const syncInteraction = (group) => ({
-  onHover: (event, elements) => {
-    const idx = elements.length ? elements[0].index : null;
-    setSyncHover(group, idx, event);
+  onHover: (_event, elements) => {
+    setSyncHover(group, elements.length ? elements[0].index : null);
   },
   onClick: (_event, elements) => {
     if (!elements.length) return;
@@ -220,12 +436,24 @@ Chart.register(crosshairPlugin);
 const makeChart = (id, config) => {
   if (charts[id]) charts[id].destroy();
   const canvas = document.getElementById(id);
+  if (!canvas) return null;
   const group = SYNC_GROUPS[id];
   if (group) {
     config.options = { ...(config.options || {}), ...syncInteraction(group) };
   }
   const chart = new Chart(canvas, config);
   chart.$syncGroup = group || null;
+  // $unit may sit on the config root or inside options (chartOptions merges it
+  // into the options object); fall back to the y-axis title text.
+  const unitOpt = config.$unit !== undefined ? config.$unit : config.options?.$unit;
+  chart.$unit = unitOpt !== undefined ? unitOpt : config.options?.scales?.y?.title?.text || '';
+  const labels = config.data?.labels || [];
+  const firstLabel = String(labels[0] ?? '');
+  chart.$dates = /^\d{4}-\d{2}-\d{2}$/.test(firstLabel)
+    ? labels.slice()
+    : group
+      ? state.rangeRows.map((r) => r.date)
+      : null;
   charts[id] = chart;
   if (group && !canvas.$syncBound) {
     canvas.$syncBound = true;
@@ -234,6 +462,7 @@ const makeChart = (id, config) => {
   }
   return chart;
 };
+
 
 const round1 = (v) => Math.round(v * 10) / 10;
 
@@ -292,13 +521,13 @@ const state = {
 };
 
 const METRICS = [
-  { key: 'sleep_total_min', label: '睡眠时长', unit: 'min', fmt: hmin, wake: true },
-  { key: 'hrv_avg', label: '夜间 HRV', unit: 'ms', fmt: (v) => `${num(v)} ms`, wake: true },
-  { key: 'rhr', label: '静息心率', unit: 'bpm', fmt: (v) => `${num(v)} bpm`, wake: false },
-  { key: 'stress_avg', label: '平均压力', unit: '分', fmt: (v) => num(v), wake: false },
-  { key: 'load_short', label: '短期负荷', unit: '', fmt: (v) => num(v), wake: false },
-  { key: 'steps', label: '步数', unit: '步', fmt: (v) => num(v), wake: false },
-  { key: 'sleep_score', label: '睡眠分', unit: '分', fmt: (v) => num(v), wake: true },
+  { key: 'sleep_total_min', label: '睡眠时长', unit: 'min', fmt: hmin, wake: true, color: '#6366f1' },
+  { key: 'hrv_avg', label: '夜间 HRV', unit: 'ms', fmt: (v) => `${num(v)} ms`, wake: true, color: '#10b981' },
+  { key: 'rhr', label: '静息心率', unit: 'bpm', fmt: (v) => `${num(v)} bpm`, wake: false, color: '#f43f5e' },
+  { key: 'stress_avg', label: '平均压力', unit: '分', fmt: (v) => num(v), wake: false, color: '#f59e0b' },
+  { key: 'load_short', label: '短期负荷', unit: '', fmt: (v) => num(v), wake: false, color: '#22d3ee' },
+  { key: 'steps', label: '步数', unit: '步', fmt: (v) => num(v), wake: false, color: '#38bdf8' },
+  { key: 'sleep_score', label: '睡眠分', unit: '分', fmt: (v) => num(v), wake: true, color: '#a855f7' },
 ];
 
 const metric = (key) => METRICS.find((m) => m.key === key);
@@ -402,6 +631,42 @@ const deviationTone = (key, deltaPct) => {
   return favourable ? 'good' : 'warn';
 };
 
+// Area sparkline: 7 points, gradient fill under a monotone stroke, and a
+// breathing dot on the latest value. Decorative only (aria-hidden) — the same
+// numbers are in the card text.
+const areaSparkline = (values, color) => {
+  const vals = values.slice(-7);
+  if (vals.filter((v) => v != null).length < 2) return '';
+  const present = vals.filter((v) => v != null);
+  const min = Math.min(...present);
+  const max = Math.max(...present);
+  const span = max - min || 1;
+  const step = 100 / Math.max(1, vals.length - 1);
+  const pts = [];
+  vals.forEach((v, i) => {
+    if (v == null) return;
+    pts.push([i * step, 24 - ((v - min) / span) * 18]);
+  });
+  if (pts.length < 2) return '';
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const area = `${line} L${pts.at(-1)[0].toFixed(1)},28 L${pts[0][0].toFixed(1)},28 Z`;
+  const [lx, ly] = pts.at(-1);
+  const id = `sg${Math.random().toString(36).slice(2, 8)}`;
+  return `<svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.35" />
+        <stop offset="100%" stop-color="${color}" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+    <path d="${area}" fill="url(#${id})" />
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.6"
+      stroke-linecap="round" vector-effect="non-scaling-stroke" />
+    <circle class="spark-dot" cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2"
+      fill="${color}" />
+  </svg>`;
+};
+
 // generic sparkline over a bare value array (body composition card)
 const seriesSparkline = (values, color) => {
   const pts = values.filter((v) => v !== null && v !== undefined).slice(-30);
@@ -414,62 +679,40 @@ const seriesSparkline = (values, color) => {
     .map((v, i) => `${(i * step).toFixed(1)},${(16 - ((v - min) / span) * 13).toFixed(1)}`)
     .join(' ');
   return `<svg class="spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
-    <polyline points="${d}" fill="none" stroke="${color}" stroke-width="1.3" vector-effect="non-scaling-stroke" />
+    <polyline points="${d}" fill="none" stroke="${color}" stroke-width="1.3"
+      stroke-linejoin="round" vector-effect="non-scaling-stroke" />
   </svg>`;
 };
 
-// 7-day sparkline anchored at the latest data point, so the card always shows
-// "where does today sit within the past week" regardless of the range filter.
-const sparkline = (rows, key, color, tone) => {
-  const tail = rows.slice(-7);
-  if (tail.length < 2) return '';
-  const vals = tail.map((r) => (r[key] == null ? null : r[key]));
-  const present = vals.filter((v) => v != null);
-  if (present.length < 2) return '';
-  const min = Math.min(...present);
-  const max = Math.max(...present);
-  const span = max - min || 1;
-  const step = 100 / Math.max(1, vals.length - 1);
-  const pts = [];
-  vals.forEach((v, i) => {
-    if (v == null) return;
-    pts.push(`${(i * step).toFixed(1)},${(16 - ((v - min) / span) * 13).toFixed(1)}`);
-  });
-  const lastX = (vals.length - 1) * step;
-  const lastV = tail.at(-1)?.[key];
-  const lastY = lastV == null ? null : 16 - ((lastV - min) / span) * 13;
-  return `<svg class="spark spark-${tone}" viewBox="0 0 100 20" preserveAspectRatio="none"
-      role="img" aria-label="最近 7 天${key === 'steps' ? '步数' : '走势'}微型趋势">
-    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.3"
-      vector-effect="non-scaling-stroke" />
-    ${
-      lastY == null
-        ? ''
-        : `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="1.6" fill="${color}" />`
-    }
-  </svg>`;
-};
-
-// Bullet bar: single day / 7-day mean / 28-day baseline on one scale.
-const bulletBar = (m, value, v7, v28) => {
+// Bullet bar: a normal-range band (28d mean ± 1 SD when available), the 7-day
+// mean as a tick and the single day as a glowing dot.
+const bulletBar = (m, value, v7, v28, sd) => {
   const pts = [value, v7, v28].filter((v) => v != null);
   if (pts.length < 2) return '';
-  const lo = Math.min(...pts);
-  const hi = Math.max(...pts);
-  const pad = (hi - lo) * 0.35 || Math.abs(hi) * 0.08 || 1;
+  const bandLo = v28 != null && sd ? v28 - sd : null;
+  const bandHi = v28 != null && sd ? v28 + sd : null;
+  const domainPts = pts.concat(bandLo != null ? [bandLo, bandHi] : []);
+  const lo = Math.min(...domainPts);
+  const hi = Math.max(...domainPts);
+  const pad = (hi - lo) * 0.22 || Math.abs(hi) * 0.08 || 1;
   const domainLo = lo - pad;
   const domainHi = hi + pad;
   const pos = (v) => Math.max(0, Math.min(100, ((v - domainLo) / (domainHi - domainLo)) * 100));
   const label = [
+    bandLo != null ? `常态区间 ${m.fmt(bandLo)}–${m.fmt(bandHi)}` : null,
     v28 != null ? `28 天基线 ${m.fmt(v28)}` : null,
     v7 != null ? `7 天均值 ${m.fmt(v7)}` : null,
     value != null ? `单日 ${m.fmt(value)}` : null,
   ]
     .filter(Boolean)
     .join('，');
-  return `<span class="bullet" role="img" aria-label="${label}"
-      title="${label}">
+  const bandStyle =
+    bandLo != null
+      ? `left:${pos(bandLo).toFixed(1)}%;width:${Math.max(1, pos(bandHi) - pos(bandLo)).toFixed(1)}%`
+      : '';
+  return `<span class="bullet" role="img" aria-label="${label}" title="${label}">
     <span class="bullet-track" aria-hidden="true"></span>
+    ${bandStyle ? `<span class="bullet-band" style="${bandStyle}" aria-hidden="true"></span>` : ''}
     ${v28 != null ? `<span class="bullet-tick base" style="left:${pos(v28).toFixed(1)}%" aria-hidden="true"></span>` : ''}
     ${v7 != null ? `<span class="bullet-tick week" style="left:${pos(v7).toFixed(1)}%" aria-hidden="true"></span>` : ''}
     ${value != null ? `<span class="bullet-dot" style="left:${pos(value).toFixed(1)}%" aria-hidden="true"></span>` : ''}
@@ -480,6 +723,15 @@ const buildKpis = () => {
   const d = state.data;
   const latestDate =
     d.coverage?.daily_health?.end || state.rangeRows.at(-1)?.date || '';
+  // 28-day SD around the latest day, for the normal-range band on the bullet
+  const sdAt = (key) => {
+    const band = baselineBand(d.daily.map((r) => r[key]));
+    const idx = d.daily.findIndex((r) => r.date === (d.latest[key]?.date || latestDate));
+    if (idx < 0 || band.upper[idx] == null) return null;
+    const sd = (band.upper[idx] - band.lower[idx]) / 2;
+    return sd > 0 ? sd : null;
+  };
+
   const cards = METRICS.map((m) => {
     const latest = d.latest[m.key] || {};
     const v7 = seriesAt(m.key, 'mean_7d', latest.date || latestDate);
@@ -492,34 +744,34 @@ const buildKpis = () => {
     const pct = v28 ? (d28 / v28) * 100 : null;
     const dir = m.key === 'sleep_score' ? null : direction(d28, (v28 || 1) * 0.05);
     const tone = deviationTone(m.key, pct);
-    const inRange = validAvg(state.rangeRows.map((r) => r[m.key]));
-    const rangeNote = state.customRange
-      ? `${state.rangeRows.length} 天均值 ${m.fmt(inRange)}`
-      : state.range >= 365
-        ? `全部均值 ${m.fmt(inRange)}`
-        : `${state.range} 天均值 ${m.fmt(inRange)}`;
-    const toneVar =
-      tone === 'good' ? C.green : tone === 'warn' ? C.amber : tone === 'flat' ? C.muted : C.slate;
+    const metricColor = m.color || C.cyan;
+    const pill = dir
+      ? `<span class="kpi-pill ${tone}">${dir.glyph}${
+          tone === 'flat'
+            ? ' 持平'
+            : d28 === null
+              ? ''
+              : ` ${num(Math.abs(d28), m.key === 'steps' ? 0 : 1)}${m.unit ? ' ' + m.unit : ''}`
+        }</span>`
+      : '';
+    const basisNote = m.key === 'steps' ? '7 天均值 vs 28 天基线' : '单日 vs 28 天基线';
+    const valueText = m.fmt(latest.value);
     return `
       <article class="kpi kpi-${tone}">
-        <span class="value">${m.fmt(latest.value)}</span>
-        <span class="label">${m.label}${m.key === 'steps' ? ` · ${rangeNote}` : ''}</span>
-        <span class="kpi-line"><b>单日</b>（${latest.date || latestDate}）</span>
-        <span class="kpi-line">7 天均值 ${m.fmt(v7)} · 28 天基线 ${m.fmt(v28)}</span>
-        ${
-          dir
-            ? `<span class="kpi-line dir ${tone}">${dir.glyph} ${dir.text}${
-                d28 === null
-                  ? ''
-                  : ` ${num(Math.abs(d28), m.key === 'steps' ? 0 : 1)}${m.unit ? ' ' + m.unit : ''}（${pct > 0 ? '+' : ''}${pct.toFixed(0)}%）`
-              }<span class="dir-basis">${
-                m.key === 'steps' ? ' · 7 天均值 vs 基线' : ' · 单日 vs 基线'
-              }</span></span>`
-            : ''
-        }
-        ${bulletBar(m, latest.value, v7, v28)}
-        ${sparkline(state.data.daily, m.key, toneVar, tone)}
-        <span class="spark-note">最近 7 天</span>
+        <header class="kpi-head">
+          <span class="kpi-name">${m.label}</span>
+          ${pill}
+        </header>
+        <div class="kpi-sub">
+          <span class="kpi-date">${latest.date || latestDate}</span>
+          <span class="kpi-basis">7d ${m.fmt(v7)} · 28d ${m.fmt(v28)}</span>
+        </div>
+        <div class="kpi-value">${valueText}</div>
+        ${bulletBar(m, latest.value, v7, v28, sdAt(m.key))}
+        <div class="spark-wrap">
+          ${areaSparkline(d.daily.slice(-7).map((r) => r[m.key]), metricColor)}
+          <span class="spark-note">近 7 天 · ${basisNote}</span>
+        </div>
       </article>`;
   });
   const box = document.getElementById('kpis');
@@ -541,15 +793,19 @@ const filterRows = () => {
 
 const shortDate = (r) => r.date.slice(5);
 
+// Smooth monotone line with an optional area gradient underneath.
 const lineDataset = (label, accessor, color, extra = {}) => ({
   label,
   data: state.rangeRows.map(accessor),
   borderColor: color,
-  backgroundColor: color,
-  borderWidth: 1.6,
+  backgroundColor: areaFill(color),
+  borderWidth: 2.2,
+  cubicInterpolationMode: 'monotone',
   pointRadius: 0,
-  pointHoverRadius: 3,
-  tension: 0.15,
+  pointHoverRadius: 5,
+  pointHoverBackgroundColor: '#07090d',
+  pointHoverBorderColor: color,
+  pointHoverBorderWidth: 2.5,
   spanGaps: false,
   ...extra,
 });
@@ -585,7 +841,7 @@ const bandUpper = (upper, label) => ({
   pointRadius: 0,
   pointHoverRadius: 0,
   fill: '+1',
-  backgroundColor: 'rgba(148,163,184,0.13)',
+  backgroundColor: 'rgba(148, 163, 184, 0.08)',
 });
 
 const bandLower = (lower) => ({
@@ -611,40 +867,50 @@ const corridorDatasets = (rows, key) => {
   return [bandUpper(upper, '基线走廊 ±1 SD'), bandLower(lower)];
 };
 
+// Minimal axes: no axis lines, no tick marks, no vertical grid; only very faint
+// dashed horizontal rules.
+const axisTicks = (maxTicks) => ({
+  color: AXIS_COLOR,
+  font: { family: MONO, size: 11 },
+  padding: 8,
+  maxTicksLimit: maxTicks,
+  autoSkip: true,
+});
+
 const baseScales = (unit, stacked = false) => ({
   x: {
     grid: { display: false },
-    ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 11 },
+    border: { display: false },
+    ticks: { ...axisTicks(9), maxRotation: 0 },
     stacked,
   },
   y: {
-    grid: { color: C.grid },
-    ticks: { maxTicksLimit: 6 },
+    grid: {
+      color: C.grid,
+      borderDash: [3, 3],
+      drawTicks: false,
+      tickLength: 0,
+    },
+    border: { display: false, dash: [3, 3] },
+    ticks: { ...axisTicks(5), maxTicksLimit: 5 },
     stacked,
-    title: { display: !!unit, text: unit, color: C.muted },
+    title: unit
+      ? { display: true, text: unit, color: '#475569', font: { family: MONO, size: 10 } }
+      : { display: false },
   },
 });
 
 const chartOptions = (unit, extra = {}) => ({
   responsive: true,
   maintainAspectRatio: false,
-  animation: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? false : undefined,
+  animation: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? false
+    : { duration: 320 },
   interaction: { mode: 'index', intersect: false },
+  layout: { padding: { top: 4, right: 4 } },
   plugins: {
     legend: { display: false },
-    tooltip: {
-      callbacks: {
-        title: (items) =>
-          items.length ? (state.rangeRows[items[0].dataIndex]?.date ?? '') : '',
-        afterBody: (items) => {
-          const row = state.rangeRows[items[0]?.dataIndex];
-          if (!row || row.stage_completeness === undefined) return [];
-          return row.stage_completeness < 1
-            ? `（分期完整性 ${Math.round(row.stage_completeness * 100)}%，缺失分期按缺失显示）`
-            : [];
-        },
-      },
-    },
+    tooltip: { enabled: false, external: externalTooltip, mode: 'index', intersect: false },
   },
   scales: baseScales(unit),
   ...extra,
@@ -658,9 +924,13 @@ const withLegend = (opts, show = true) => ({
       display: show,
       position: 'bottom',
       labels: {
-        boxWidth: 10,
+        boxWidth: 6,
+        boxHeight: 6,
         usePointStyle: true,
-        padding: 12,
+        pointStyle: 'circle',
+        padding: 14,
+        color: C.muted,
+        font: { family: MONO, size: 11 },
         filter: (item) => !!(item.text && item.text.trim()),
       },
     },
@@ -812,7 +1082,7 @@ const execStateCard = () => {
   const d = state.data;
   const rows = d.daily;
   const last = rows.at(-1);
-  if (!last) return { title: '近期状态 vs 基线', body: '暂无数据', tone: 'muted' };
+  if (!last) return { title: '近期状态 vs 基线', body: '暂无数据', tone: 'muted', icon: 'state' };
   const specs = [
     ['sleep_total_min', '睡眠', true],
     ['hrv_avg', 'HRV', true],
@@ -841,7 +1111,7 @@ const execStateCard = () => {
       else bad += 1;
     }
   }
-  if (!parts.length) return { title: '近期状态 vs 基线', body: '基线样本不足（需 20 天以上）', tone: 'muted' };
+  if (!parts.length) return { title: '近期状态 vs 基线', body: '基线样本不足（需 20 天以上）', tone: 'muted', icon: 'state' };
   const tone = bad === 0 ? 'good' : good >= bad ? 'neutral' : 'warn';
   const lead =
     bad === 0
@@ -849,12 +1119,12 @@ const execStateCard = () => {
       : good >= bad
         ? '多数指标在基线附近'
         : '有指标明显偏离基线';
-  return { title: '近期状态 vs 基线', body: `${lead}：${parts.join(' · ')}`, tone };
+  return { title: '近期状态 vs 基线', body: `${lead}：${parts.join(' · ')}`, tone, icon: 'state' };
 };
 
 const execTrendCard = () => {
   const hs = (state.data.insights?.hypotheses || []).slice();
-  if (!hs.length) return { title: '持续变化的指标', body: '暂无足够数据', tone: 'muted' };
+  if (!hs.length) return { title: '持续变化的指标', body: '暂无足够数据', tone: 'muted', icon: 'trend' };
   const scale = { sleep_total_min: 60, hrv_avg: 5, rhr: 2, stress_avg: 5 };
   hs.sort((a, b) => Math.abs(b.delta) / (scale[b.metric] || 1) - Math.abs(a.delta) / (scale[a.metric] || 1));
   const top = hs.slice(0, 2).map((h) => {
@@ -866,12 +1136,13 @@ const execTrendCard = () => {
     title: '持续变化的指标',
     body: `近 7 天 vs 前 28 天：${top.join(' · ')}`,
     tone: 'neutral',
+    icon: 'trend',
   };
 };
 
 const execAnomalyCard = () => {
   const rows = state.data.daily;
-  if (rows.length < 30) return { title: '值得观察的异常', body: '历史不足 30 天，暂不扫描', tone: 'muted' };
+  if (rows.length < 30) return { title: '值得观察的异常', body: '历史不足 30 天，暂不扫描', tone: 'muted', icon: 'alert' };
   const window = rows.slice(-14);
   const specs = [
     ['sleep_total_min', '睡眠'],
@@ -896,23 +1167,50 @@ const execAnomalyCard = () => {
       }
     });
   }
-  if (!flags.length) return { title: '值得观察的异常', body: '最近 14 天各指标均在个人 ±1.5 SD 内', tone: 'good' };
+  if (!flags.length) return { title: '值得观察的异常', body: '最近 14 天各指标均在个人 ±1.5 SD 内', tone: 'good', icon: 'alert' };
   flags.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
   const top = flags.slice(0, 2).map((f) => `${f.date.slice(5)} ${f.label} ${f.z > 0 ? '+' : ''}${f.z.toFixed(1)} SD`);
-  return { title: '值得观察的异常', body: `最近 14 天：${top.join(' · ')}`, tone: 'warn' };
+  return { title: '值得观察的异常', body: `最近 14 天：${top.join(' · ')}`, tone: 'warn', icon: 'alert' };
 };
 
 const execNextCard = () => {
   const cs = (state.data.correlations || []).filter((c) => c.r != null);
-  if (!cs.length) return { title: '下一步验证', body: '相关性样本不足', tone: 'muted' };
+  if (!cs.length) return { title: '下一步验证', body: '相关性样本不足', tone: 'muted', icon: 'link' };
   cs.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
   const c = cs[0];
   return {
     title: '下一步验证',
     body: `${c.label}：r=${c.r.toFixed(2)}（95% CI ${c.ci_low.toFixed(2)}~${c.ci_high.toFixed(2)}，n=${c.n}）。相关不等于因果，可在下方切换滞后天数复看。`,
     tone: 'neutral',
+    icon: 'link',
   };
 };
+
+// small inline icons for the four summary cards (no emoji: they vary per OS)
+const EXEC_ICONS = {
+  state:
+    '<path d="M3 12h4l2.5-7 5 14L17 12h4" />',
+  trend:
+    '<path d="M3 17l6-6 4 4 7-8" /><path d="M20 7h-5" /><path d="M20 7v5" />',
+  alert:
+    '<path d="M12 3.5 21 20H3z" /><path d="M12 9v5" /><path d="M12 17h.01" />',
+  link:
+    '<path d="M9.5 14.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1" />' +
+    '<path d="M14.5 9.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1" />',
+};
+
+const execIcon = (key) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${
+       EXEC_ICONS[key] || EXEC_ICONS.state
+     }</svg>`;
+
+// wrap the numbers that carry the conclusion so they read as data, not prose
+const highlightNumbers = (text) =>
+  text.replace(
+    /([-+±]?\d[\d,]*(?:\.\d+)?\s?(?:%|ms|bpm|min|分|SD|kg|步)|[-+±]?\d{1,3}(?:,\d{3})+)/g,
+    '<span class="hl">$1</span>'
+  );
 
 const renderExecutiveSummary = () => {
   const box = document.getElementById('exec-grid');
@@ -921,10 +1219,13 @@ const renderExecutiveSummary = () => {
   box.innerHTML = cards
     .map(
       (c) => `
-      <div class="exec-card ${c.tone}">
-        <span class="exec-title">${c.title}</span>
-        <p class="exec-body">${c.body}</p>
-      </div>`
+      <article class="exec-card ${c.tone}">
+        <header class="exec-head">
+          <span class="exec-icon ${c.tone}">${execIcon(c.icon)}</span>
+          <span class="exec-title">${c.title}</span>
+        </header>
+        <p class="exec-body">${highlightNumbers(c.body)}</p>
+      </article>`
     )
     .join('');
 };
@@ -1021,35 +1322,51 @@ const renderBodyScatter = () => {
     if (!byYear.has(y)) byYear.set(y, []);
     byYear.get(y).push({ x: r.bmi, y: r.body_fat_pct, date: r.date });
   }
-  const palette = ['#0e7490', '#0891b2', '#22d3ee', '#7dd3fc', '#94a3b8',
-    '#fbbf24', '#fb7185', '#34d399', '#60a5fa'];
+  const palette = [
+    '#22d3ee', '#38bdf8', '#6366f1', '#a855f7', '#f43f5e',
+    '#f59e0b', '#10b981', '#818cf8', '#fb7185', '#2dd4bf',
+  ];
   const years = [...byYear.keys()].sort();
   makeChart('bodyScatterChart', {
     type: 'scatter',
     data: {
-      datasets: years.map((y, i) => ({
-        label: y,
-        data: byYear.get(y),
-        backgroundColor: palette[i % palette.length],
-        pointRadius: 3,
-        pointHoverRadius: 5,
-      })),
+      datasets: years.map((y, i) => {
+        const c = palette[i % palette.length];
+        return {
+          label: y,
+          data: byYear.get(y),
+          backgroundColor: hexA(c, 0.5),
+          borderColor: c,
+          borderWidth: 1,
+          pointRadius: 3.2,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#07090d',
+          pointHoverBorderWidth: 2,
+        };
+      }),
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      ...chartOptions(''),
       plugins: {
-        legend: { display: true, position: 'bottom', labels: { boxWidth: 8, usePointStyle: true, padding: 8 } },
-        tooltip: {
-          callbacks: {
-            title: (items) => (items[0]?.raw?.date ? items[0].raw.date : ''),
-            label: (c) => `${c.dataset.label}: BMI ${num(c.parsed.x, 1)} · 体脂 ${num(c.parsed.y, 1)}%`,
+        ...withLegend({ plugins: {} }).plugins,
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            boxWidth: 6,
+            boxHeight: 6,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 12,
+            color: C.muted,
+            font: { family: MONO, size: 11 },
           },
         },
       },
       scales: {
-        x: { title: { display: true, text: 'BMI', color: C.muted }, grid: { color: C.grid } },
-        y: { title: { display: true, text: '体脂率 %', color: C.muted }, grid: { color: C.grid } },
+        ...baseScales(''),
+        x: { ...baseScales('').x, title: { display: true, text: 'BMI', color: '#475569', font: { family: MONO, size: 10 } } },
+        y: { ...baseScales('').y, title: { display: true, text: '体脂率 %', color: '#475569', font: { family: MONO, size: 10 } } },
       },
     },
   });
@@ -1090,23 +1407,21 @@ const renderBodyRate = () => {
           label: '体重变化 kg/周',
           data: values,
           backgroundColor: values.map((v) =>
-            v > 0.05 ? 'rgba(251,191,36,0.65)' : v < -0.05 ? 'rgba(34,211,238,0.65)' : 'rgba(148,163,184,0.45)'
+            v > 0.05 ? hexA(C.amber, 0.75) : v < -0.05 ? hexA(C.cyan, 0.75) : hexA(C.slate, 0.5)
           ),
-          borderWidth: 0,
+          hoverBackgroundColor: values.map((v) =>
+            v > 0.05 ? C.amber : v < -0.05 ? C.cyan : C.slate
+          ),
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: 0.7,
+          categoryPercentage: 0.85,
         },
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: (c) => `${c.parsed.y > 0 ? '+' : ''}${num(c.parsed.y, 2)} kg/周` } },
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
-        y: { grid: { color: C.grid }, ticks: { maxTicksLimit: 5 }, title: { display: true, text: 'kg/周', color: C.muted } },
-      },
+      ...chartOptions('kg/周'),
+      plugins: { legend: { display: false } },
     },
   });
 };
@@ -1128,22 +1443,24 @@ const renderBodyComposition = () => {
           {
             label: '脂肪量 kg',
             data: fat,
-            backgroundColor: 'rgba(251,191,36,0.42)',
-            borderColor: 'rgba(251,191,36,0.85)',
-            borderWidth: 1.2,
-            fill: true,
+            backgroundColor: areaFill(C.amber, 0.35, 0.12),
+            borderColor: C.amber,
+            borderWidth: 2,
+            fill: 'origin',
+            stack: 'comp',
             pointRadius: 0,
-            tension: 0.15,
+            cubicInterpolationMode: 'monotone',
           },
           {
             label: '去脂体重 kg',
             data: lean,
-            backgroundColor: 'rgba(34,211,238,0.32)',
-            borderColor: 'rgba(34,211,238,0.85)',
-            borderWidth: 1.2,
-            fill: true,
+            backgroundColor: areaFill(C.cyan, 0.28, 0.08),
+            borderColor: C.cyan,
+            borderWidth: 2,
+            fill: 'origin',
+            stack: 'comp',
             pointRadius: 0,
-            tension: 0.15,
+            cubicInterpolationMode: 'monotone',
           },
         ],
       },
@@ -1177,56 +1494,52 @@ const renderTrainingChart = () => {
   const start = rangeStartDate();
   const weeks = start ? all.filter((w) => w.week >= start) : all;
   if (!weeks.length) return;
-  makeChart(
-    'trainingChart',
-    withLegend({
-      type: 'bar',
-      data: {
-        labels: weeks.map((w) => w.week.slice(5)),
-        datasets: [
-          {
-            label: '跑步 km',
-            data: weeks.map((w) => w.run_km),
-            backgroundColor: 'rgba(52,211,153,0.65)',
-            borderWidth: 0,
-          },
-          {
-            label: '骑行 km',
-            data: weeks.map((w) => w.ride_km),
-            backgroundColor: 'rgba(34,211,238,0.55)',
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: withLegend(
-        chartOptions('km', {
-          scales: {
-            ...baseScales('km'),
-            x: { ...baseScales('km').x, stacked: false },
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                title: (items) => {
-                  const w = weeks[items[0]?.dataIndex];
-                  return w ? `${w.week} 起这一周` : '';
-                },
-                afterBody: (items) => {
-                  const w = weeks[items[0]?.dataIndex];
-                  if (!w) return [];
-                  return [
-                    `跑步 ${w.runs} 次 · 骑行 ${w.rides} 次 · 徒步 ${w.hikes} 次`,
-                    `总时长 ${Math.round(w.minutes)} 分钟`,
-                  ];
-                },
-              },
-            },
-          },
-        }),
-        true
-      ),
-    })
-  );
+  const chart = makeChart('trainingChart', {
+    type: 'bar',
+    data: {
+      labels: weeks.map((w) => w.week.slice(5)),
+      datasets: [
+        {
+          label: '跑步 km',
+          data: weeks.map((w) => w.run_km),
+          backgroundColor: barFill(C.emerald, 0.95, 0.4),
+          hoverBackgroundColor: C.emerald,
+          borderRadius: 5,
+          borderSkipped: false,
+          barPercentage: 0.68,
+          categoryPercentage: 0.84,
+        },
+        {
+          label: '骑行 km',
+          data: weeks.map((w) => w.ride_km),
+          backgroundColor: barFill(C.sky, 0.95, 0.4),
+          hoverBackgroundColor: C.sky,
+          borderRadius: 5,
+          borderSkipped: false,
+          barPercentage: 0.68,
+          categoryPercentage: 0.84,
+        },
+      ],
+    },
+    options: withLegend(
+      chartOptions('km', {
+        scales: {
+          ...baseScales('km'),
+          x: { ...baseScales('km').x, stacked: false },
+        },
+      })
+    ),
+  });
+  if (chart) {
+    chart.$tipExtra = (i) => {
+      const w = weeks[i];
+      if (!w) return [];
+      return [
+        `跑步 ${w.runs} 次 · 骑行 ${w.rides} 次 · 徒步 ${w.hikes} 次`,
+        `总时长 ${Math.round(w.minutes)} 分钟`,
+      ];
+    };
+  }
 };
 
 const renderBodyCharts = () => {
@@ -1265,15 +1578,21 @@ const renderBodyCharts = () => {
       data: {
         labels: w.labels,
         datasets: [
-          lineDataset('体重', () => null, C.accent, {
+          lineDataset('体重', () => null, C.sky, {
             data: w.values,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-            borderWidth: 1.4,
+            fill: true,
+            backgroundColor: areaFill(C.sky, 0.26),
+            pointRadius: 2.4,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#07090d',
+            pointBorderColor: C.sky,
+            pointBorderWidth: 1.6,
           }),
           lineDataset('近 7 次均值', () => null, C.line, {
             data: w.mean7,
-            borderWidth: 1.2,
+            borderWidth: 1.4,
+            borderDash: [4, 4],
+            backgroundColor: 'transparent',
           }),
         ],
       },
@@ -1289,13 +1608,19 @@ const renderBodyCharts = () => {
         datasets: [
           lineDataset('体脂率', () => null, C.amber, {
             data: f.values,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-            borderWidth: 1.4,
+            fill: true,
+            backgroundColor: areaFill(C.amber, 0.26),
+            pointRadius: 2.4,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#07090d',
+            pointBorderColor: C.amber,
+            pointBorderWidth: 1.6,
           }),
           lineDataset('近 7 次均值', () => null, C.line, {
             data: f.mean7,
-            borderWidth: 1.2,
+            borderWidth: 1.4,
+            borderDash: [4, 4],
+            backgroundColor: 'transparent',
           }),
         ],
       },
@@ -1306,6 +1631,273 @@ const renderBodyCharts = () => {
   renderBodyRate();
   renderBodyComposition();
   renderBodyYears();
+};
+
+// Missing-stage marker: a small hatched capsule at the bottom of the plot area.
+// It marks "no stage breakdown recorded", never a 0-minute stage.
+const missingStagePlugin = {
+  id: 'missingStages',
+  afterDatasetsDraw(chart) {
+    const flags = chart.$missingStages;
+    if (!flags || !flags.some(Boolean)) return;
+    const { ctx, chartArea, scales } = chart;
+    if (!chartArea || !scales.x) return;
+    flags.forEach((missing, i) => {
+      if (!missing) return;
+      const x = scales.x.getPixelForValue(i);
+      if (!Number.isFinite(x)) return;
+      const w = 6;
+      const h = 10;
+      const y = chartArea.bottom - h - 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(x - w / 2, y, w, h, 3);
+      ctx.fillStyle = hatchPattern(chart, 'rgba(148, 163, 184, 0.55)');
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    });
+  },
+};
+Chart.register(missingStagePlugin);
+
+const renderSleepChart = () => {
+  const rows = state.rangeRows;
+  const stages = [
+    { key: 'deep', label: '深睡', color: C.indigo },
+    { key: 'light', label: '浅睡', color: C.sky },
+    { key: 'rem', label: 'REM', color: C.purple },
+    { key: 'awake', label: '清醒', color: C.rose },
+  ];
+  const chart = makeChart('sleepChart', {
+    type: 'bar',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        ...stages.map((st) => ({
+          label: st.label,
+          data: rows.map((r) => r[st.key]),
+          backgroundColor: barFill(st.color, 0.92, 0.55),
+          borderColor: 'rgba(9, 10, 15, 0.55)',
+          borderWidth: { top: 1, left: 0, right: 0, bottom: 0 },
+          borderRadius: 4,
+          borderSkipped: false,
+          stack: 'sleep',
+          barPercentage: 0.72,
+          categoryPercentage: 0.82,
+        })),
+        {
+          label: '总时长（线）',
+          data: rows.map((r) => r.sleep_total_min),
+          type: 'line',
+          borderColor: C.line,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          cubicInterpolationMode: 'monotone',
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: '#07090d',
+          pointHoverBorderColor: C.line,
+        },
+      ],
+    },
+    options: withLegend(chartOptions('分钟', { scales: baseScales('分钟', true) })),
+  });
+  if (chart) {
+    chart.$missingStages = rows.map(
+      (r) => r.stage_completeness != null && r.stage_completeness < 1 && r.deep == null
+    );
+  }
+};
+
+// series 数组长度 === data.daily 全长度；range 始终 tail-slice ⇒ 全局 index 有固定偏移
+const toGlobal = (i) => state.data.daily.length - state.rangeRows.length + i;
+
+const renderHrvChart = () => {
+  const s = state.data.series.hrv;
+  const rows = state.rangeRows;
+  // amber segments where HRV sits below its own 28-day baseline - 1 SD
+  const band = baselineBand(state.data.daily.map((r) => r.hrv_avg));
+  const start = state.data.daily.indexOf(rows[0]);
+  const lowFlags = rows.map((_, i) => {
+    const idx = start + i;
+    const v = rows[i].hrv_avg;
+    const lo = band.lower[idx];
+    return v != null && lo != null && v < lo;
+  });
+  makeChart('hrvChart', {
+    type: 'line',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        ...corridorDatasets(rows, 'hrv_avg'),
+        lineDataset('单日 HRV', (r) => r.hrv_avg, C.emerald, {
+          fill: true,
+          backgroundColor: areaFill(C.emerald, 0.3),
+          segment: {
+            borderColor: (ctx) =>
+              lowFlags[ctx.p0DataIndex] && lowFlags[ctx.p1DataIndex] ? C.amber : C.emerald,
+          },
+        }),
+        lineDataset('7 天均值', () => null, '#e2e8f0', {
+          borderWidth: 1.4,
+          backgroundColor: 'transparent',
+          data: rows.map((_, i) => s.mean_7d[toGlobal(i)]),
+        }),
+        lineDataset('28 天基线', () => null, C.lineDim, {
+          borderDash: [4, 4],
+          borderWidth: 1.4,
+          backgroundColor: 'transparent',
+          data: rows.map((_, i) => s.mean_28d[toGlobal(i)]),
+        }),
+        lineDataset('设备基线', () => null, C.slate, {
+          borderDash: [2, 4],
+          borderWidth: 1,
+          backgroundColor: 'transparent',
+          data: rows.map((_, i) => s.device_baseline[toGlobal(i)]),
+        }),
+      ],
+    },
+    options: withLegend(chartOptions('ms')),
+  });
+};
+
+const renderRhrChart = () => {
+  const s = state.data.series.rhr;
+  const rows = state.rangeRows;
+  makeChart('rhrChart', {
+    type: 'line',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        ...corridorDatasets(rows, 'rhr'),
+        lineDataset('单日', (r) => r.rhr, C.rose, {
+          fill: true,
+          backgroundColor: areaFill(C.rose, 0.26),
+        }),
+        lineDataset('7 天均值', () => null, '#e2e8f0', {
+          borderWidth: 1.4,
+          backgroundColor: 'transparent',
+          data: rows.map((_, i) => s.mean_7d[toGlobal(i)]),
+        }),
+        lineDataset('28 天基线', () => null, C.lineDim, {
+          borderDash: [4, 4],
+          borderWidth: 1.4,
+          backgroundColor: 'transparent',
+          data: rows.map((_, i) => s.mean_28d[toGlobal(i)]),
+        }),
+      ],
+    },
+    options: withLegend(chartOptions('bpm')),
+  });
+};
+
+const renderStressChart = () => {
+  const s = state.data.series.stress_avg;
+  const rows = state.rangeRows;
+  makeChart('stressChart', {
+    type: 'line',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        ...corridorDatasets(rows, 'stress_avg'),
+        lineDataset('平均压力', (r) => r.stress_avg, C.amber, {
+          fill: true,
+          backgroundColor: areaFill(C.amber, 0.26),
+        }),
+        lineDataset('7 天均值', () => null, '#e2e8f0', {
+          borderWidth: 1.4,
+          backgroundColor: 'transparent',
+          data: rows.map((_, i) => s.mean_7d[toGlobal(i)]),
+        }),
+      ],
+    },
+    options: withLegend(chartOptions('分')),
+  });
+};
+
+const renderStepsChart = () => {
+  const rows = state.rangeRows;
+  makeChart('stepsChart', {
+    type: 'bar',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        ...corridorDatasets(rows, 'steps'),
+        {
+          label: '步数',
+          data: rows.map((r) => r.steps),
+          backgroundColor: barFill(C.cyan, 0.9, 0.28),
+          hoverBackgroundColor: C.cyan,
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: 0.72,
+          categoryPercentage: 0.86,
+        },
+      ],
+    },
+    options: withLegend(chartOptions('步')),
+  });
+};
+
+const renderLoadCharts = () => {
+  const rows = state.rangeRows;
+  makeChart('loadChart', {
+    type: 'line',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        lineDataset('短期负荷（7 天）', (r) => r.load_short, C.cyan, {
+          fill: true,
+          backgroundColor: areaFill(C.cyan, 0.24),
+        }),
+        lineDataset('长期负荷（28 天）', (r) => r.load_long, C.periwinkle, {
+          borderDash: [5, 4],
+          backgroundColor: 'transparent',
+        }),
+      ],
+    },
+    options: withLegend(chartOptions('负荷', { $unit: '' })),
+  });
+
+  makeChart('loadRatioChart', {
+    type: 'line',
+    data: {
+      labels: rows.map(shortDate),
+      datasets: [
+        {
+          label: '负荷比',
+          data: rows.map((r) => r.load_ratio),
+          borderColor: C.amber,
+          backgroundColor: areaFill(C.amber, 0.22),
+          borderWidth: 2.2,
+          cubicInterpolationMode: 'monotone',
+          fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#07090d',
+          pointHoverBorderColor: C.amber,
+          segment: {
+            borderColor: (ctx) =>
+              ctx.p0.parsed.y > 1.2 || ctx.p1.parsed.y > 1.2 ? C.rose : C.amber,
+          },
+        },
+        {
+          label: '参考线 1.0',
+          data: rows.map(() => 1),
+          borderColor: 'rgba(148, 163, 184, 0.45)',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: withLegend(chartOptions('负荷比')),
+  });
 };
 
 const renderCharts = () => {
@@ -1330,221 +1922,6 @@ const renderCharts = () => {
   renderQuality();
   renderCoverage();
   renderStatus();
-};
-
-const renderSleepChart = () => {
-  const rows = state.rangeRows;
-  makeChart(
-    'sleepChart',
-    withLegend({
-      type: 'bar',
-      data: {
-        labels: rows.map(shortDate),
-        datasets: [
-          { label: '深睡', data: rows.map((r) => r.deep), backgroundColor: '#0e7490', borderColor: '#0e7490', stack: 's' },
-          { label: '浅睡', data: rows.map((r) => r.light), backgroundColor: 'rgba(34,211,238,0.65)', borderColor: C.accent, stack: 's' },
-          { label: 'REM', data: rows.map((r) => r.rem), backgroundColor: 'rgba(125,211,252,0.45)', borderColor: '#7dd3fc', stack: 's' },
-          { label: '清醒', data: rows.map((r) => r.awake), backgroundColor: 'rgba(100,116,139,0.45)', borderColor: C.slate, stack: 's' },
-          {
-            label: '总时长（线）',
-            data: rows.map((r) => r.sleep_total_min),
-            type: 'line',
-            borderColor: C.line,
-            backgroundColor: C.line,
-            borderWidth: 1.2,
-            borderDash: [5, 4],
-            pointRadius: 0,
-            tension: 0.15,
-          },
-        ],
-      },
-      options: withLegend(
-        chartOptions('分钟', {
-          scales: baseScales('分钟', true),
-        }),
-        true
-      ),
-    })
-  );
-};
-
-// series 数组长度 === data.daily 全长度；range 始终 tail-slice ⇒ 全局 index 有固定偏移
-const toGlobal = (i) => state.data.daily.length - state.rangeRows.length + i;
-
-const renderHrvChart = () => {
-  const s = state.data.series.hrv;
-  makeChart(
-    'hrvChart',
-    withLegend({
-      type: 'line',
-      data: {
-        labels: state.rangeRows.map(shortDate),
-        datasets: [
-          ...corridorDatasets(state.rangeRows, 'hrv_avg'),
-          lineDataset('单日 HRV', (r) => r.hrv_avg, C.accent),
-          lineDataset('7 天均值', () => null, '#e2e8f0', {
-            borderWidth: 1.4,
-            data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
-          }),
-          lineDataset('28 天基线', () => null, C.lineDim, {
-            borderDash: [6, 4],
-            borderWidth: 1.2,
-            data: state.rangeRows.map((_, i) => s.mean_28d[toGlobal(i)]),
-          }),
-          lineDataset('设备基线', () => null, C.slate, {
-            borderDash: [2, 3],
-            borderWidth: 1,
-            data: state.rangeRows.map((_, i) => s.device_baseline[toGlobal(i)]),
-          }),
-        ],
-      },
-      options: withLegend(chartOptions('ms')),
-    })
-  );
-};
-
-const renderRhrChart = () => {
-  const s = state.data.series.rhr;
-  makeChart(
-    'rhrChart',
-    withLegend({
-      type: 'line',
-      data: {
-        labels: state.rangeRows.map(shortDate),
-        datasets: [
-          ...corridorDatasets(state.rangeRows, 'rhr'),
-          lineDataset('单日', (r) => r.rhr, C.accent),
-          {
-            label: '7 天均值',
-            data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
-            borderColor: '#e2e8f0',
-            backgroundColor: '#e2e8f0',
-            borderWidth: 1.4,
-            pointRadius: 0,
-            tension: 0.25,
-          },
-        ],
-      },
-      options: withLegend(chartOptions('bpm')),
-    })
-  );
-};
-
-const renderStressChart = () => {
-  const s = state.data.series.stress_avg;
-  makeChart(
-    'stressChart',
-    withLegend({
-      type: 'line',
-      data: {
-        labels: state.rangeRows.map(shortDate),
-        datasets: [
-          ...corridorDatasets(state.rangeRows, 'stress_avg'),
-          lineDataset('平均压力', (r) => r.stress_avg, C.accent),
-          {
-            label: '7 天均值',
-            data: state.rangeRows.map((_, i) => s.mean_7d[toGlobal(i)]),
-            borderColor: '#e2e8f0',
-            backgroundColor: '#e2e8f0',
-            borderWidth: 1.4,
-            pointRadius: 0,
-            tension: 0.25,
-          },
-        ],
-      },
-      options: withLegend(chartOptions('分')),
-    })
-  );
-};
-
-const renderStepsChart = () => {
-  makeChart(
-    'stepsChart',
-    withLegend({
-      type: 'bar',
-      data: {
-        labels: state.rangeRows.map(shortDate),
-        datasets: [
-          ...corridorDatasets(state.rangeRows, 'steps'),
-          {
-            label: '步数',
-            data: state.rangeRows.map((r) => r.steps),
-            backgroundColor: 'rgba(56,189,248,0.55)',
-            borderRadius: 3,
-          },
-        ],
-      },
-      options: withLegend(chartOptions('步')),
-    })
-  );
-};
-
-const renderLoadCharts = () => {
-  makeChart(
-    'loadChart',
-    withLegend({
-      type: 'line',
-      data: {
-        labels: state.rangeRows.map(shortDate),
-        datasets: [
-          lineDataset('短期负荷（7 天）', (r) => r.load_short, C.accent),
-          lineDataset('长期负荷（28 天）', (r) => r.load_long, C.accent2, {
-            borderDash: [5, 3],
-          }),
-        ],
-      },
-      options: withLegend(chartOptions('负荷')),
-    })
-  );
-  const ratio = makeChart(
-    'loadRatioChart',
-    withLegend({
-      type: 'line',
-      data: {
-        labels: state.rangeRows.map(shortDate),
-        datasets: [
-          {
-            label: '负荷比',
-            data: state.rangeRows.map((r) => r.load_ratio),
-            borderColor: C.amber,
-            backgroundColor: C.amber,
-            borderWidth: 1.6,
-            pointRadius: 0,
-            tension: 0.25,
-          },
-          {
-            label: '参考线 1.0',
-            data: state.rangeRows.map(() => 1),
-            borderColor: 'rgba(148,163,184,0.5)',
-            borderWidth: 1,
-            borderDash: [4, 4],
-            pointRadius: 0,
-          },
-        ],
-      },
-      options: withLegend(chartOptions('负荷比')),
-    })
-  );
-  syncTooltips(charts.loadChart, ratio);
-};
-
-const syncTooltips = (a, b) => {
-  if (!a || !b) return;
-  const link = (from, to) => {
-    from.options.onHover = (evt, elements) => {
-      const index = elements[0]?.index ?? null;
-      if (index === null || index === undefined) return;
-      const act = [{ datasetIndex: 0, index }];
-      to.tooltip.setActiveElements(act, { x: 0, y: 0 });
-      to.update('none');
-    };
-    from.options.onLeave = () => {
-      to.tooltip.setActiveElements([], { x: 0, y: 0 });
-      to.update('none');
-    };
-  };
-  link(a, b);
-  link(b, a);
 };
 
 // -------------------------------------------------------- correlation tools
@@ -1694,6 +2071,24 @@ const renderCorrBuckets = () => {
 const renderCorrChart = () => {
   const { def, pairs } = corrPairs();
   const st = pearsonJs(pairs);
+  const fit = (() => {
+    if (st.r === null || pairs.length < 2) return null;
+    const xs = pairs.map((p) => p.x);
+    const ys = pairs.map((p) => p.y);
+    const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
+    const my = ys.reduce((a, b) => a + b, 0) / ys.length;
+    const denom = pairs.reduce((a, p) => a + (p.x - mx) ** 2, 0);
+    if (!denom) return null;
+    const slope = pairs.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) / denom;
+    const a = my - slope * mx;
+    const xmin = Math.min(...xs);
+    const xmax = Math.max(...xs);
+    return [
+      { x: xmin, y: a + slope * xmin },
+      { x: xmax, y: a + slope * xmax },
+    ];
+  })();
+
   makeChart('corrChart', {
     type: 'scatter',
     data: {
@@ -1701,66 +2096,58 @@ const renderCorrChart = () => {
         {
           label: def.label,
           data: pairs.map((p) => ({ x: p.x, y: p.y, date: p.date })),
-          borderColor: C.accent,
-          backgroundColor: 'rgba(34,211,238,0.35)',
-          pointRadius: 3,
-          pointHoverRadius: 5,
+          backgroundColor: 'rgba(56, 189, 248, 0.55)',
+          borderColor: C.sky,
+          borderWidth: 1,
+          pointRadius: 3.4,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#07090d',
+          pointHoverBorderWidth: 2,
         },
-        ...(st.r !== null && pairs.length >= 2
+        ...(fit
           ? [
               {
                 label: `线性拟合 r=${st.r.toFixed(2)}`,
                 type: 'line',
-                data: (() => {
-                  const xs = pairs.map((p) => p.x);
-                  const ys = pairs.map((p) => p.y);
-                  const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
-                  const my = ys.reduce((a, b) => a + b, 0) / ys.length;
-                  const b =
-                    pairs.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0) /
-                    pairs.reduce((a, p) => a + (p.x - mx) ** 2, 0);
-                  const a = my - b * mx;
-                  const xmin = Math.min(...xs), xmax = Math.max(...xs);
-                  return [
-                    { x: xmin, y: a + b * xmin },
-                    { x: xmax, y: a + b * xmax },
-                  ];
-                })(),
-                borderColor: 'rgba(226,232,240,0.6)',
-                borderWidth: 1.4,
-                borderDash: [6, 4],
+                data: fit,
+                borderColor: 'rgba(226, 232, 240, 0.55)',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
                 pointRadius: 0,
+                fill: false,
               },
             ]
           : []),
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (items) => (items[0]?.raw?.date ? `日期 ${items[0].raw.date}` : ''),
-            label: (ctx) =>
-              ctx.datasetIndex === 0
-                ? `${def.xu} ${num(ctx.parsed.x)} → ${def.yu} ${num(ctx.parsed.y)}`
-                : '',
-          },
-        },
-      },
+      ...chartOptions(''),
       scales: {
         x: {
           type: 'linear',
-          title: { display: true, text: `${def.label.split('→')[0].trim()}（${def.xu}）`, color: C.muted },
-          grid: { color: C.grid },
+          grid: { color: C.grid, borderDash: [3, 3], drawTicks: false },
+          border: { display: false },
+          ticks: axisTicks(6),
+          title: {
+            display: true,
+            text: `${def.label.split('→')[0].trim()}（${def.xu}）`,
+            color: '#475569',
+            font: { family: MONO, size: 10 },
+          },
         },
         y: {
-          title: { display: true, text: `${def.label.split('→')[1].trim()}（${def.yu}）`, color: C.muted },
-          grid: { color: C.grid },
+          grid: { color: C.grid, borderDash: [3, 3], drawTicks: false },
+          border: { display: false },
+          ticks: axisTicks(5),
+          title: {
+            display: true,
+            text: `${def.label.split('→')[1].trim()}（${def.yu}）`,
+            color: '#475569',
+            font: { family: MONO, size: 10 },
+          },
         },
       },
+      plugins: { legend: { display: false } },
     },
   });
 };
