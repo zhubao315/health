@@ -1020,8 +1020,20 @@ h1 {
   color: var(--muted);
 }
 
-#body-card .chart-box + .chart-box {
-  margin-top: 0.6rem;
+#body-card .body-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+#body-card .body-charts .chart-box {
+  height: 240px;
+}
+
+@media (max-width: 767px) {
+  #body-card .body-charts {
+    grid-template-columns: 1fr;
+  }
 }
 
 

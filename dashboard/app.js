@@ -83,6 +83,8 @@ const makeChart = (id, config) => {
   return charts[id];
 };
 
+const round1 = (v) => Math.round(v * 10) / 10;
+
 const hmin = (m) => {
   if (m === null || m === undefined) return '缺失';
   const h = Math.floor(m / 60);
@@ -412,6 +414,108 @@ const renderBodyYears = () => {
     </table>`;
 };
 
+// weight x body-fat phase plot: is the change fat or lean mass?
+const renderBodyScatter = () => {
+  const rows = (state.data.body || []).filter(
+    (r) => r.weight_kg != null && r.body_fat_pct != null
+  );
+  if (rows.length < 4) return;
+  const byYear = new Map();
+  for (const r of rows) {
+    const y = r.date.slice(0, 4);
+    if (!byYear.has(y)) byYear.set(y, []);
+    byYear.get(y).push({ x: r.weight_kg, y: r.body_fat_pct, date: r.date });
+  }
+  const palette = ['#0e7490', '#0891b2', '#22d3ee', '#7dd3fc', '#94a3b8',
+    '#fbbf24', '#fb7185', '#34d399', '#60a5fa'];
+  const years = [...byYear.keys()].sort();
+  makeChart('bodyScatterChart', {
+    type: 'scatter',
+    data: {
+      datasets: years.map((y, i) => ({
+        label: y,
+        data: byYear.get(y),
+        backgroundColor: palette[i % palette.length],
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { boxWidth: 8, usePointStyle: true, padding: 8 } },
+        tooltip: {
+          callbacks: {
+            title: (items) => (items[0]?.raw?.date ? items[0].raw.date : ''),
+            label: (c) => `${c.dataset.label}: ${num(c.parsed.x, 1)} kg · ${num(c.parsed.y, 1)}%`,
+          },
+        },
+      },
+      scales: {
+        x: { title: { display: true, text: '体重 kg', color: C.muted }, grid: { color: C.grid } },
+        y: { title: { display: true, text: '体脂率 %', color: C.muted }, grid: { color: C.grid } },
+      },
+    },
+  });
+};
+
+// week-over-week weight change, paired against the last weigh-in ~30 days back
+const weightRateSeries = () => {
+  const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
+  const out = { labels: [], values: [] };
+  for (let i = 0; i < rows.length; i++) {
+    const cur = rows[i];
+    const t0 = new Date(cur.date + 'T00:00:00').getTime();
+    let j = i - 1;
+    while (j >= 0) {
+      const dt = (t0 - new Date(rows[j].date + 'T00:00:00').getTime()) / 86400000;
+      if (dt >= 21) {
+        if (dt <= 90) {
+          out.labels.push(cur.date);
+          out.values.push(round1(((cur.weight_kg - rows[j].weight_kg) / dt) * 7));
+        }
+        break;
+      }
+      j -= 1;
+    }
+  }
+  return out;
+};
+
+const renderBodyRate = () => {
+  const { labels, values } = weightRateSeries();
+  if (!labels.length) return;
+  makeChart('weightRateChart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '体重变化 kg/周',
+          data: values,
+          backgroundColor: values.map((v) =>
+            v > 0.05 ? 'rgba(251,191,36,0.65)' : v < -0.05 ? 'rgba(34,211,238,0.65)' : 'rgba(148,163,184,0.45)'
+          ),
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => `${c.parsed.y > 0 ? '+' : ''}${num(c.parsed.y, 2)} kg/周` } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { grid: { color: C.grid }, ticks: { maxTicksLimit: 5 }, title: { display: true, text: 'kg/周', color: C.muted } },
+      },
+    },
+  });
+};
+
 const renderBodyCharts = () => {
   const w = state.data.series?.weight_kg;
   const f = state.data.series?.body_fat_pct;
@@ -461,6 +565,8 @@ const renderBodyCharts = () => {
       options: withLegend(chartOptions('%'), true),
     })
   );
+  renderBodyScatter();
+  renderBodyRate();
 };
 
 const renderCharts = () => {

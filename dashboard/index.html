@@ -41,13 +41,6 @@
 
     <main class="main" id="main">
       <!-- ① 数据状态与更新时间 -->
-      <section id="data-status" class="status-strip" aria-live="polite" hidden>
-        <span id="status-icon" aria-hidden="true"></span>
-        <span id="status-text">载入数据…</span>
-        <a id="status-link" href="https://github.com/zhubao315/health/actions" target="_blank"
-          rel="noopener">同步记录</a>
-      </section>
-
       <section class="hero">
         <div id="badge" class="badge"><span class="dot" aria-hidden="true"></span> 数据载入中…</div>
         <h1>睡眠、心率与恢复</h1>
@@ -109,10 +102,16 @@
               </div>
             </div>
             <div class="body-kpis" id="body-kpis"></div>
-            <div class="chart-box"><canvas id="weightChart" role="img"
-                aria-label="体重随时间的走势，含最近 7 次称重的均值"></canvas></div>
-            <div class="chart-box"><canvas id="bodyFatChart" role="img"
-                aria-label="体脂率随时间的走势，含最近 7 次称重的均值"></canvas></div>
+            <div class="body-charts">
+              <div class="chart-box"><canvas id="weightChart" role="img"
+                  aria-label="体重随时间的走势，含最近 7 次称重的均值"></canvas></div>
+              <div class="chart-box"><canvas id="bodyFatChart" role="img"
+                  aria-label="体脂率随时间的走势，含最近 7 次称重的均值"></canvas></div>
+              <div class="chart-box"><canvas id="bodyScatterChart" role="img"
+                  aria-label="体重与体脂率的散点图，用于判断体重变化来自脂肪还是肌肉"></canvas></div>
+              <div class="chart-box"><canvas id="weightRateChart" role="img"
+                  aria-label="体重变化速率，按周计算，正值为增重"></canvas></div>
+            </div>
             <div class="body-years" id="body-years"></div>
             <div class="data-table" id="table-weightChart" hidden></div>
           </article>
