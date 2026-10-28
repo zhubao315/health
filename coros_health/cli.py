@@ -45,6 +45,11 @@ def main():
     parser.add_argument("--skip-hrv", action="store_true")
     parser.add_argument("--skip-rhr", action="store_true")
     parser.add_argument("--skip-load", action="store_true")
+    parser.add_argument(
+        "--build-only",
+        action="store_true",
+        help="skip every fetch and only rebuild payload/quality/CSV from the DB",
+    )
     args = parser.parse_args()
 
     end = datetime.date.fromisoformat(args.end) if args.end else quality.beijing_today()
@@ -55,11 +60,15 @@ def main():
         start = db.incremental_start(conn, start)
 
     print(f"[sync] {start} -> {end}", flush=True)
-    token = get_token(
-        DEFAULT_ISSUER,
-        os.environ.get("COROS_ACCOUNT") or os.environ.get("COROS_EMAIL"),
-        os.environ.get("COROS_PASSWORD"),
-    )
+    if args.build_only:
+        print("[sync] build-only: skipping all fetches", flush=True)
+        token = None
+    else:
+        token = get_token(
+            DEFAULT_ISSUER,
+            os.environ.get("COROS_ACCOUNT") or os.environ.get("COROS_EMAIL"),
+            os.environ.get("COROS_PASSWORD"),
+        )
 
     hrv_series = []
     fetch_errors = {}
@@ -79,13 +88,13 @@ def main():
             fetch_errors[table] = str(exc)[:200]
             print(f"[sync] warn: {table} fetch failed; keeping existing rows", flush=True)
 
-    if not args.skip_daily_health:
+    if not args.build_only and not args.skip_daily_health:
         _fetch("daily_health", lambda: fetch.fetch_daily_health(token, start, end))
 
-    if not args.skip_sleep:
+    if not args.build_only and not args.skip_sleep:
         _fetch("sleep", lambda: fetch.fetch_sleep(token, start, end))
 
-    if not args.skip_hrv:
+    if not args.build_only and not args.skip_hrv:
         try:
             hrv_rows, hrv_series = fetch.fetch_hrv(token, start, end)
             db.upsert(conn, "hrv", hrv_rows)
@@ -95,18 +104,20 @@ def main():
             fetch_errors["hrv"] = str(exc)[:200]
             print("[sync] warn: hrv fetch failed; keeping existing rows", flush=True)
 
-    _fetch("avg_hr", lambda: fetch.fetch_avg_hr(token, start, end))
+    if not args.build_only:
+        _fetch("avg_hr", lambda: fetch.fetch_avg_hr(token, start, end))
 
-    if not args.skip_rhr:
+    if not args.build_only and not args.skip_rhr:
         _fetch("rhr", lambda: fetch.fetch_rhr(token, start, end))
 
-    _fetch("stress_daily", lambda: fetch.fetch_stress_daily(token, start, end))
+    if not args.build_only:
+        _fetch("stress_daily", lambda: fetch.fetch_stress_daily(token, start, end))
 
-    if not args.skip_load:
+    if not args.build_only and not args.skip_load:
         _fetch("load", lambda: fetch.fetch_load(token, start, end))
 
     stress_series = []
-    if not args.skip_series:
+    if not args.build_only and not args.skip_series:
         try:
             stress_series = fetch.fetch_stress_series(token, start, end)
         except Exception as exc:
@@ -114,11 +125,11 @@ def main():
             print("[sync] warn: stress series failed; keeping existing csv", flush=True)
 
     sports = []
-    if not args.skip_sports:
+    if not args.build_only and not args.skip_sports:
         _fetch("activities", lambda: fetch.fetch_sports(token, start, end))
 
     try:
-        snapshots = fetch.fetch_snapshots(token)
+        snapshots = {} if args.build_only else fetch.fetch_snapshots(token)
     except Exception as exc:
         fetch_errors["snapshots"] = str(exc)[:200]
         print(f"[sync] warn: snapshots fetch failed; keeping existing rows", flush=True)

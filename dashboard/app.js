@@ -367,7 +367,49 @@ const renderBodyKpis = () => {
         ${delta === null ? '' : `<span class="delta">较近 7 次 ${delta > 0 ? '+' : ''}${num(delta, 1)}</span>`}
       </span>`);
   }
+  const last = state.data.body?.[state.data.body.length - 1];
+  if (last) {
+    const days = Math.round(
+      (Date.now() - new Date(last.date + 'T00:00:00').getTime()) / 86400000
+    );
+    if (days >= 0 && days <= 400) {
+      parts.push(
+        `<span class="item"><span class="label">距上次称重 ${days === 0 ? '今天' : days + ' 天'}</span></span>`
+      );
+    }
+  }
   box.innerHTML = parts.join('');
+  renderBodyYears();
+};
+
+const renderBodyYears = () => {
+  const box = document.getElementById('body-years');
+  const rows = state.data.body || [];
+  if (!box || !rows.length) return;
+  const byYear = new Map();
+  for (const r of rows) {
+    const y = r.date.slice(0, 4);
+    const e = byYear.get(y) || { n: 0, w: [], f: [] };
+    e.n += 1;
+    if (r.weight_kg != null) e.w.push(r.weight_kg);
+    if (r.body_fat_pct != null) e.f.push(r.body_fat_pct);
+    byYear.set(y, e);
+  }
+  const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const body = [...byYear.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([y, e]) => {
+      const w = avg(e.w);
+      const f = avg(e.f);
+      return `<tr><td>${y}</td><td class="num">${e.n}</td><td class="num">${w == null ? '—' : num(w, 1)}</td><td class="num">${f == null ? '—' : num(f, 1)}</td></tr>`;
+    })
+    .join('');
+  box.innerHTML = `
+    <table class="coverage table-inline body-year-table">
+      <thead><tr><th>年份</th><th class="num">称重次数</th><th class="num">体重均值 kg</th><th class="num">体脂均值 %</th></tr></thead>
+      <tbody>${body}</tbody>
+      <caption>只统计当年实际称重记录；「—」表示当年没有体脂数据（只测了体重）</caption>
+    </table>`;
 };
 
 const renderBodyCharts = () => {

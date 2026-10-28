@@ -1,0 +1,91 @@
+name: Body Sync
+
+# Weekly pull of the Yunmai (好轻) scale. Weigh-ins are not daily, so a weekly
+# cadence keeps the board current without hitting the vendor API every day.
+on:
+  schedule:
+    - cron: '10 1 * * 1' # Mondays 09:10 Asia/Shanghai
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: body-sync
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  sync:
+    name: Sync body composition
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install fetch dependencies
+        run: pip install --quiet requests pycryptodome
+
+      - name: Fetch Yunmai records
+        env:
+          YUNMAI_ACCOUNT: ${{ secrets.YUNMAI_ACCOUNT }}
+          YUNMAI_PASSWORD: ${{ secrets.YUNMAI_PASSWORD }}
+        run: YUNMAI_OUT=/tmp/yunmai.json python scripts/fetch_yunmai.py
+
+      - name: Import into SQLite
+        run: python scripts/import_yunmai.py /tmp/yunmai.json
+
+      - name: Rebuild dashboard from the database
+        run: python -m coros_health.cli --build-only
+
+      - name: Commit new weigh-ins
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no new weigh-ins"
+            exit 0
+          fi
+          git commit -m "chore: sync body composition $(date -u +%F)"
+          git pull --rebase origin main
+          git push
+
+  deploy:
+    name: Deploy dashboard
+    needs: sync
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Stamp asset fingerprints
+        run: |
+          V=$(cat dashboard/app.js dashboard/style.css | sha1sum | cut -c1-12)
+          sed -i "s/__BUILD_HASH__/${V}/g" dashboard/index.html dashboard/app.js
+          echo "asset build: ${V}"
+          grep -q "window.__ASSET_BUILD__ = \"${V}\"" dashboard/index.html
+          grep -q "ASSET_BUILD = '${V}'" dashboard/app.js
+
+      - name: Upload dashboard
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dashboard
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

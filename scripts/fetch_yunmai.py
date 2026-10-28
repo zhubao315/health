@@ -5,14 +5,18 @@ open-source yunmai extractors. Credentials are passed on the command line and
 never written to disk.
 """
 
-import base64, hashlib, json, sys, time, urllib.parse
+import base64, hashlib, json, os, sys, time, urllib.parse
 import requests
 from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 
-if len(sys.argv) < 3:
-    sys.exit("usage: python scripts/fetch_yunmai.py <phone> <password> [out.json]")
-ACCOUNT, PASSWORD = sys.argv[1], sys.argv[2]
+ACCOUNT = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("YUNMAI_ACCOUNT")
+PASSWORD = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("YUNMAI_PASSWORD")
+if not ACCOUNT or not PASSWORD:
+    sys.exit(
+        "usage: python scripts/fetch_yunmai.py [phone] [password] [out.json]\n"
+        "       or set YUNMAI_ACCOUNT / YUNMAI_PASSWORD"
+    )
 SECRET = "AUMtyBDV3vklBr6wtA2putAMwtmVcD5b"
 UA = (
     "google/android(10,29) channel(huawei) app(4.25,42500010)"
@@ -98,6 +102,8 @@ print("rows:", len(rows))
 if rows:
     print("keys:", sorted(rows[0].keys()))
     print("sample:", json.dumps(rows[0], ensure_ascii=False)[:500])
-out = sys.argv[3] if len(sys.argv) > 3 else "yunmai_rows.json"
+out = os.environ.get("YUNMAI_OUT") or (
+    sys.argv[3] if len(sys.argv) > 3 else "yunmai_rows.json"
+)
 json.dump({"user_id": user_id, "rows": rows}, open(out, "w"), ensure_ascii=False)
 print(f"wrote {out}")
