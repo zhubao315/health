@@ -748,13 +748,14 @@ const bmiOf = (kg) =>
 
 const renderProfilePills = () => {
   const box = document.getElementById('header-meta');
-  if (!box) return;
+  const alt = document.getElementById('hero-meta');
+  if (!box && !alt) return;
   const h = state.data.profile?.height_cm ?? 186;
   const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
   const last = rows.at(-1);
   const bmi = last ? bmiOf(last.weight_kg) : null;
   const latest = state.data.daily?.at(-1)?.date;
-  box.innerHTML = [
+  const html = [
     `<span class="pill-meta">身高 ${h} cm</span>`,
     last ? `<span class="pill-meta">体重 ${num(last.weight_kg, 1)} kg</span>` : '',
     bmi != null ? `<span class="pill-meta">BMI ${num(bmi, 1)}</span>` : '',
@@ -762,6 +763,8 @@ const renderProfilePills = () => {
   ]
     .filter(Boolean)
     .join('');
+  if (box) box.innerHTML = html;
+  if (alt) alt.innerHTML = html;
 };
 
 const renderProfile = () => {

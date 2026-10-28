@@ -2100,3 +2100,23 @@ main section[id] {
   color: var(--text);
   background: var(--bg-soft);
 }
+
+/* the header pills are hidden below 900px, so the hero carries them on phones */
+.hero-meta {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    order: -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero-sub {
+    display: none;
+  }
+}
