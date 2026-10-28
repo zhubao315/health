@@ -125,7 +125,8 @@ const addDays = (iso, delta) => {
 // ------------------------------------------------------------------- state
 
 const state = {
-  range: 90, // 30 / 90 / 365 / 0(全部)
+  range: 90, // 7 / 30 / 90 / 365 / 0(全部)
+  customRange: null, // {start, end} ISO dates; overrides `range` when set
   corrKey: 0,
   corrLag: 1,
   heat: 'sleep_total_min',
@@ -225,6 +226,21 @@ const direction = (delta, tolPct = 0.05) => {
   return { glyph: '▼', text: '偏低', cls: 'down' };
 };
 
+const sparkline = (values, color) => {
+  const pts = values.filter((v) => v !== null && v !== undefined).slice(-30);
+  if (pts.length < 3) return '';
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const step = 100 / (pts.length - 1);
+  const d = pts
+    .map((v, i) => `${(i * step).toFixed(1)},${(18 - ((v - min) / span) * 16).toFixed(1)}`)
+    .join(' ');
+  return `<svg class="spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${d}" fill="none" stroke="${color}" stroke-width="1.3" vector-effect="non-scaling-stroke" />
+  </svg>`;
+};
+
 const buildKpis = () => {
   const d = state.data;
   const latestDate =
@@ -236,8 +252,9 @@ const buildKpis = () => {
     const d28 = v28 !== null && latest.value !== null ? latest.value - v28 : null;
     const dir = m.key === 'sleep_score' ? null : direction(d28, (v28 || 1) * 0.05);
     const inRange = validAvg(state.rangeRows.map((r) => r[m.key]));
-    const rangeNote =
-      state.range >= 365
+    const rangeNote = state.customRange
+      ? `${state.rangeRows.length} 天均值 ${m.fmt(inRange)}`
+      : state.range >= 365
         ? `全部均值 ${m.fmt(inRange)}`
         : `${state.range} 天均值 ${m.fmt(inRange)}`;
     return `
@@ -251,6 +268,7 @@ const buildKpis = () => {
             ? `<span class="kpi-line dir ${dir.cls}">${dir.glyph} ${dir.text} ${d28 === null ? '' : num(Math.abs(d28), 1) + ' ' + m.unit}</span>`
             : ''
         }
+        ${sparkline(state.rangeRows.map((r) => r[m.key]), C.accent)}
       </article>`;
   });
   const box = document.getElementById('kpis');
@@ -262,6 +280,11 @@ const buildKpis = () => {
 
 const filterRows = () => {
   const all = state.data.daily;
+  if (state.customRange) {
+    return all.filter(
+      (r) => r.date >= state.customRange.start && r.date <= state.customRange.end
+    );
+  }
   return state.range > 0 ? all.slice(-state.range) : all;
 };
 
@@ -1365,6 +1388,9 @@ const wireTables = () => {
 
 const applyRange = (n) => {
   state.range = n;
+  state.customRange = null;
+  const note = document.getElementById('custom-range-note');
+  if (note) note.textContent = '';
   // switching range resets the progressive table back to the first page
   state.dailyLimit = 30;
   state.dailyExpanded = false;
@@ -1378,8 +1404,11 @@ const applyRange = (n) => {
     b.classList.toggle('active', active);
     b.setAttribute('aria-pressed', String(active));
   });
-  document.getElementById('range-label').textContent =
-    n === 0 ? '时间范围：全部' : `时间范围：最近 ${n} 天`;
+  document.getElementById('range-label').textContent = state.customRange
+    ? `时间范围：${state.customRange.start} → ${state.customRange.end}`
+    : n === 0
+      ? '时间范围：全部'
+      : `时间范围：最近 ${n} 天`;
   renderCharts();
 };
 
@@ -1430,8 +1459,11 @@ const init = async () => {
   state.corrKey = 0;
 
   document.getElementById('range').addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (btn) applyRange(Number(btn.dataset.range));
+    // only preset buttons carry data-range; the custom toggle must not reset it
+    const btn = e.target.closest('button[data-range]');
+    if (btn && Number.isFinite(Number(btn.dataset.range))) {
+      applyRange(Number(btn.dataset.range));
+    }
   });
 
   document.getElementById('corr-select').addEventListener('change', (e) => {
@@ -1495,6 +1527,51 @@ const init = async () => {
   });
 
   document.getElementById('export-csv').addEventListener('click', exportCsv);
+
+  // custom date range
+  const customBox = document.getElementById('custom-range');
+  const toggle = document.getElementById('custom-toggle');
+  const startInput = document.getElementById('range-start');
+  const endInput = document.getElementById('range-end');
+  const all = state.data.daily;
+  if (all.length) {
+    startInput.min = endInput.min = all[0].date;
+    startInput.max = endInput.max = all[all.length - 1].date;
+    startInput.value = all[Math.max(0, all.length - 30)].date;
+    endInput.value = all[all.length - 1].date;
+  }
+  toggle.addEventListener('click', () => {
+    const open = customBox.hidden;
+    customBox.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) startInput.focus();
+  });
+  document.getElementById('range-apply').addEventListener('click', () => {
+    const start = startInput.value;
+    const end = endInput.value;
+    const note = document.getElementById('custom-range-note');
+    if (!start || !end) {
+      note.textContent = '请选择开始和结束日期';
+      return;
+    }
+    if (start > end) {
+      note.textContent = '开始日期不能晚于结束日期';
+      return;
+    }
+    const rows = state.data.daily.filter((r) => r.date >= start && r.date <= end);
+    if (!rows.length) {
+      note.textContent = '该区间没有记录';
+      return;
+    }
+    note.textContent = `${rows.length} 天有记录`;
+    state.customRange = { start, end };
+    document.querySelectorAll('#range button[data-range]').forEach((b) => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    document.getElementById('range-label').textContent = `时间范围：${start} → ${end}`;
+    renderCharts();
+  });
 
   // 键盘可达：canvas Enter/Space → 打开等效数据表
   document.querySelectorAll('canvas[role="img"]').forEach((canvas) => {

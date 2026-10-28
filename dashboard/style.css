@@ -1044,3 +1044,38 @@ h1 {
 .body-year-table caption {
   text-align: left;
 }
+
+
+/* KPI mini trend (last 30 points of the current range) */
+.kpi .spark {
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin-top: 0.45rem;
+  opacity: 0.75;
+}
+
+/* custom date range */
+.custom-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.custom-range input[type='date'] {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-soft);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.custom-range label {
+  font-size: 0.8rem;
+}

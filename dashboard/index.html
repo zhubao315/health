@@ -43,17 +43,28 @@
       <!-- ① 数据状态与更新时间 -->
       <section class="hero">
         <div id="badge" class="badge"><span class="dot" aria-hidden="true"></span> 数据载入中…</div>
-        <h1>睡眠、心率与恢复</h1>
+        <h1>健康驾驶舱</h1>
         <p>
           用 COROS MCP 每天同步的睡眠、HRV、静息心率、压力、步数与训练负荷，
           回答四个问题：最近状态与个人基线相比如何？哪些指标在持续变化？
           有没有值得观察的异常？下一步可以验证什么？
         </p>
         <div class="range" id="range" role="group" aria-label="时间范围（全页共用）">
+          <button type="button" data-range="7">7 天</button>
           <button type="button" data-range="30">30 天</button>
           <button type="button" data-range="90" class="active" aria-pressed="true">90 天</button>
           <button type="button" data-range="365">1 年</button>
           <button type="button" data-range="0">全部</button>
+          <button type="button" id="custom-toggle" aria-expanded="false" aria-controls="custom-range">自定义</button>
+        </div>
+        <div class="custom-range" id="custom-range" hidden>
+          <label for="range-start">从</label>
+          <input type="date" id="range-start" />
+          <span aria-hidden="true">→</span>
+          <label for="range-end">到</label>
+          <input type="date" id="range-end" />
+          <button type="button" class="tool" id="range-apply">应用</button>
+          <span class="hint" id="custom-range-note"></span>
         </div>
       </section>
 
