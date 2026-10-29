@@ -3,12 +3,13 @@ name: Health Sync
 on:
   workflow_dispatch:
   schedule:
-    # 09:07 / 21:07 Asia/Shanghai — twice a day, deliberately a few minutes past
-    # the hour because GitHub's scheduler heavily delays :00 slots (observed a
-    # 6-hour drift on this repo). The evening run also acts as the same-day
-    # compensation pass if the morning one was skipped or throttled.
+    # 09:07 Asia/Shanghai — one pass a day. Health data is written once a day
+    # by the watch, and the incremental fetch always backfills whatever a
+    # missed or throttled run left behind, so an evening compensation pass only
+    # doubled the Actions cost. The slot is deliberately a few minutes past the
+    # hour because GitHub's scheduler heavily delays :00 slots (observed a
+    # 6-hour drift on this repo).
     - cron: '7 1 * * *'   # 09:07 Asia/Shanghai
-    - cron: '7 13 * * *'  # 21:07 Asia/Shanghai
   push:
     branches:
       - main
@@ -36,7 +37,24 @@ jobs:
   sync:
     name: Sync health data
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
+      # The bot's own data commit touches dashboard/, analysis/ and README.md,
+      # which are all trigger paths — without this guard every sync would buy
+      # itself a second full run (fetch + analysis + deploy). Pushes only run
+      # the unit tests and the deploy job below.
+      - name: Decide whether this run syncs
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -49,33 +67,47 @@ jobs:
         run: python -m unittest discover -s tests -q
 
       - name: Sync COROS health data
+        if: steps.gate.outputs.run == 'true'
         env:
           COROS_ACCOUNT: ${{ secrets.COROS_ACCOUNT }}
           COROS_PASSWORD: ${{ secrets.COROS_PASSWORD }}
         run: python -m coros_health.cli --incremental
 
       - name: Build analysis summary
+        if: steps.gate.outputs.run == 'true'
         run: python analysis/health_analysis.py --days 30
 
       - name: Update README coverage
+        if: steps.gate.outputs.run == 'true'
         run: python scripts/update_readme.py
 
       - name: Commit new data
+        id: commit
+        if: steps.gate.outputs.run == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
           if git diff --cached --quiet; then
             echo "nothing to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "chore: sync health data $(date -u +%Y-%m-%dT%H:%MZ)"
           git pull --rebase origin main
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy dashboard
     needs: sync
+    # Skip when the daily fetch produced nothing (the page would be identical)
+    # and when the bot commits its own data — that commit's push is covered by
+    # the deploy job of the run that produced it.
+    if: |
+      needs.sync.outputs.changed == 'true' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore: sync health data'))
     runs-on: ubuntu-latest
     environment:
       name: github-pages
