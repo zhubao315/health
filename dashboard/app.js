@@ -1900,28 +1900,63 @@ const renderLoadCharts = () => {
   });
 };
 
+// Each card renders independently: one broken metric must never blank the
+// whole cockpit (a single top-level try/catch turned a局部 bug into an empty
+// page). `anchor` is an element owned by that module; the degradation note is
+// inserted into its nearest enclosing card.
+const RENDER_STEPS = [
+  { label: '目前状态 KPI', run: () => buildKpis(), anchor: '#kpis' },
+  { label: '睡眠', run: () => renderSleepChart(), anchor: '#sleepChart' },
+  { label: '夜间 HRV', run: () => renderHrvChart(), anchor: '#hrvChart' },
+  { label: '静息心率', run: () => renderRhrChart(), anchor: '#rhrChart' },
+  { label: '压力', run: () => renderStressChart(), anchor: '#stressChart' },
+  { label: '步数', run: () => renderStepsChart(), anchor: '#stepsChart' },
+  { label: '训练负荷', run: () => renderLoadCharts(), anchor: '#loadChart' },
+  { label: '周训练量', run: () => renderTrainingChart(), anchor: '#trainingChart' },
+  { label: '个人档案', run: () => renderProfilePills(), anchor: '#overview' },
+  { label: '四问速览', run: () => renderExecutiveSummary(), anchor: '#exec-summary' },
+  { label: '体重与体脂', run: () => renderBodyCharts(), anchor: '#weightChart' },
+  { label: '相关性散点', run: () => renderCorrChart(), anchor: '#corrChart' },
+  { label: '相关性分桶', run: () => renderCorrBuckets(), anchor: '#correlation' },
+  { label: '相关性统计', run: () => renderCorrStats(), anchor: '#correlation' },
+  { label: '健康指标日历', run: () => renderHeatmap(), anchor: '#heatmap' },
+  { label: '当日详情', run: () => renderDayDetail(), anchor: '#day-detail' },
+  { label: '每日数据表', run: () => renderDailyTable(), anchor: '#daily-table' },
+  { label: '数据质量', run: () => renderQuality(), anchor: '#quality' },
+  { label: '数据覆盖', run: () => renderCoverage(), anchor: '#quality' },
+  { label: '状态条', run: () => renderStatus(), anchor: '#exec-summary' },
+];
+
+const markDegraded = (step, error) => {
+  const host =
+    document.querySelector(step.anchor)?.closest('.card') ||
+    document.querySelector(step.anchor) ||
+    document.querySelector('main') ||
+    document.body;
+  if (host.querySelector('[data-degraded]')) return; // re-render must not pile up notes
+  const note = document.createElement('p');
+  note.className = 'degraded-note';
+  note.dataset.degraded = step.label;
+  note.textContent = `「${step.label}」本次渲染失败，其余模块不受影响（${error.message}）`;
+  host.append(note);
+};
+
 const renderCharts = () => {
   state.rangeRows = filterRows();
-  buildKpis();
-  renderSleepChart();
-  renderHrvChart();
-  renderRhrChart();
-  renderStressChart();
-  renderStepsChart();
-  renderLoadCharts();
-  renderTrainingChart();
-  renderProfilePills();
-  renderExecutiveSummary();
-  renderBodyCharts();
-  renderCorrChart();
-  renderCorrBuckets();
-  renderCorrStats();
-  renderHeatmap();
-  renderDayDetail();
-  renderDailyTable();
-  renderQuality();
-  renderCoverage();
-  renderStatus();
+  const degraded = [];
+  for (const step of RENDER_STEPS) {
+    try {
+      step.run();
+    } catch (error) {
+      degraded.push(step.label);
+      markDegraded(step, error);
+      // warn, not error: the deploy gate treats console.error as a blocker
+      console.warn(`degraded: ${step.label}`, error);
+    }
+  }
+  if (degraded.length) {
+    console.warn(`renderCharts completed with ${degraded.length} degraded module(s)`);
+  }
 };
 
 // -------------------------------------------------------- correlation tools

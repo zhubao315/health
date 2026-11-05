@@ -132,6 +132,32 @@ jobs:
           grep -q "ASSET_BUILD = '${V}'" dashboard/app.js
           grep -o 'v=[0-9a-f]*' dashboard/index.html | sort -u
 
+      - name: Set up Node.js for the smoke test
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Smoke-test the dashboard in a real browser
+        # Runs on the stamped files, i.e. exactly what ships. Catches the class
+        # of bug that blanked the whole cockpit once: a runtime error during
+        # init that no unit test can see. Exits non-zero on any pageerror or
+        # console.error, so a broken build can never reach Pages.
+        run: |
+          set -o pipefail
+          npm install --no-fund --no-audit playwright-core
+          npx playwright-core install --with-deps chromium-headless-shell
+          SHELL_BIN="$(find "$HOME/.cache/ms-playwright" -name headless_shell -type f | head -n1)"
+          test -n "$SHELL_BIN"
+          python3 -m http.server 8021 --bind 127.0.0.1 --directory dashboard &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          for _ in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:8021/index.html && break
+            sleep 1
+          done
+          BROWSER_PATH="$SHELL_BIN" SMOKE_URL=http://127.0.0.1:8021/index.html \
+            node scripts/smoke_dashboard.js
+
       - name: Upload dashboard
         uses: actions/upload-pages-artifact@v3
         with:
