@@ -1,0 +1,706 @@
+{
+ "generated_at": "2026-11-07T03:28:09+00:00",
+ "layer_version": 1,
+ "schema": [
+  "activity_id",
+  "sport_type",
+  "start_time",
+  "distance_m",
+  "duration_s",
+  "elevation_gain_m",
+  "elevation_loss_m",
+  "avg_heart_rate",
+  "max_heart_rate",
+  "training_load",
+  "source",
+  "source_activity_id"
+ ],
+ "notes": [
+  "distance is reported per sport and never summed across sports",
+  "elevation_loss is not recorded by any device export and stays null",
+  "training_load comes from the COROS health archive, not from these sport exports",
+  "records are de-duplicated by (source, source_activity_id)"
+ ],
+ "sources": [
+  {
+   "sport": "running",
+   "repo": "zhubao315/running",
+   "branch": "master",
+   "sport_type": "run",
+   "records_raw": 2035,
+   "records_used": 2035,
+   "date_first": "2015",
+   "date_last": "2026"
+  },
+  {
+   "sport": "cycling",
+   "repo": "zhubao315/cycling",
+   "branch": "main",
+   "sport_type": "ride",
+   "records_raw": 7919,
+   "records_used": 7919,
+   "date_first": "2013",
+   "date_last": "2026"
+  },
+  {
+   "sport": "hiking",
+   "repo": "zhubao315/hiking",
+   "branch": "main",
+   "sport_type": "hike",
+   "records_raw": 344,
+   "records_used": 344,
+   "date_first": "2013",
+   "date_last": "2026"
+  }
+ ],
+ "career": {
+  "running": {
+   "count": 2035,
+   "distance_km": 24514.97,
+   "duration_h": 2261.18,
+   "elevation_gain_m": null,
+   "elevation_records": 0,
+   "hr_records": 616
+  },
+  "cycling": {
+   "count": 7919,
+   "distance_km": 49108.75,
+   "duration_h": 3388.42,
+   "elevation_gain_m": 153529,
+   "elevation_records": 4780,
+   "hr_records": 3283
+  },
+  "hiking": {
+   "count": 344,
+   "distance_km": 2693.79,
+   "duration_h": 741.61,
+   "elevation_gain_m": 53014,
+   "elevation_records": 180,
+   "hr_records": 26
+  }
+ },
+ "years": [
+  {
+   "year": 2013,
+   "sports": {
+    "running": {
+     "count": 0,
+     "distance_km": 0.0,
+     "duration_h": 0.0,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 35,
+     "distance_km": 1734.54,
+     "duration_h": 85.4,
+     "elevation_gain_m": 20366,
+     "elevation_records": 35,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 115,
+     "distance_km": 801.51,
+     "duration_h": 252.92,
+     "elevation_gain_m": 12278,
+     "elevation_records": 112,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 150,
+    "duration_h": 338.32,
+    "elevation_gain_m": 32644
+   }
+  },
+  {
+   "year": 2014,
+   "sports": {
+    "running": {
+     "count": 0,
+     "distance_km": 0.0,
+     "duration_h": 0.0,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 19,
+     "distance_km": 1438.51,
+     "duration_h": 84.93,
+     "elevation_gain_m": 19644,
+     "elevation_records": 19,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 26,
+     "distance_km": 239.61,
+     "duration_h": 74.71,
+     "elevation_gain_m": 2799,
+     "elevation_records": 26,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 45,
+    "duration_h": 159.64,
+    "elevation_gain_m": 22443
+   }
+  },
+  {
+   "year": 2015,
+   "sports": {
+    "running": {
+     "count": 59,
+     "distance_km": 526.91,
+     "duration_h": 56.36,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 3,
+     "distance_km": 190.71,
+     "duration_h": 10.66,
+     "elevation_gain_m": 794,
+     "elevation_records": 3,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 4,
+     "distance_km": 36.62,
+     "duration_h": 7.79,
+     "elevation_gain_m": 426,
+     "elevation_records": 3,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 66,
+    "duration_h": 74.81,
+    "elevation_gain_m": 1220
+   }
+  },
+  {
+   "year": 2016,
+   "sports": {
+    "running": {
+     "count": 216,
+     "distance_km": 2151.61,
+     "duration_h": 216.82,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 19,
+     "distance_km": 189.26,
+     "duration_h": 12.85,
+     "elevation_gain_m": 1149,
+     "elevation_records": 18,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 0,
+     "distance_km": 0.0,
+     "duration_h": 0.0,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 235,
+    "duration_h": 229.67,
+    "elevation_gain_m": 1149
+   }
+  },
+  {
+   "year": 2017,
+   "sports": {
+    "running": {
+     "count": 243,
+     "distance_km": 2521.57,
+     "duration_h": 224.19,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 698,
+     "distance_km": 2238.0,
+     "duration_h": 169.37,
+     "elevation_gain_m": 1451,
+     "elevation_records": 26,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 27,
+     "distance_km": 175.4,
+     "duration_h": 39.18,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 968,
+    "duration_h": 432.74,
+    "elevation_gain_m": 1451
+   }
+  },
+  {
+   "year": 2018,
+   "sports": {
+    "running": {
+     "count": 251,
+     "distance_km": 2467.13,
+     "duration_h": 235.43,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 500,
+     "distance_km": 2594.8,
+     "duration_h": 187.11,
+     "elevation_gain_m": 1853,
+     "elevation_records": 35,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 23,
+     "distance_km": 143.82,
+     "duration_h": 30.45,
+     "elevation_gain_m": 36,
+     "elevation_records": 1,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 774,
+    "duration_h": 452.99,
+    "elevation_gain_m": 1889
+   }
+  },
+  {
+   "year": 2019,
+   "sports": {
+    "running": {
+     "count": 205,
+     "distance_km": 2278.49,
+     "duration_h": 195.08,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 445,
+     "distance_km": 3211.72,
+     "duration_h": 217.55,
+     "elevation_gain_m": 1359,
+     "elevation_records": 26,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 58,
+     "distance_km": 283.63,
+     "duration_h": 57.1,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 708,
+    "duration_h": 469.73,
+    "elevation_gain_m": 1359
+   }
+  },
+  {
+   "year": 2020,
+   "sports": {
+    "running": {
+     "count": 197,
+     "distance_km": 2302.97,
+     "duration_h": 202.78,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 340,
+     "distance_km": 2800.31,
+     "duration_h": 188.74,
+     "elevation_gain_m": 4950,
+     "elevation_records": 59,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 8,
+     "distance_km": 31.32,
+     "duration_h": 8.1,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 545,
+    "duration_h": 399.62,
+    "elevation_gain_m": 4950
+   }
+  },
+  {
+   "year": 2021,
+   "sports": {
+    "running": {
+     "count": 162,
+     "distance_km": 2077.12,
+     "duration_h": 188.27,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    },
+    "cycling": {
+     "count": 941,
+     "distance_km": 5329.11,
+     "duration_h": 371.17,
+     "elevation_gain_m": 130,
+     "elevation_records": 3,
+     "hr_records": 0
+    },
+    "hiking": {
+     "count": 7,
+     "distance_km": 30.37,
+     "duration_h": 7.39,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 1110,
+    "duration_h": 566.83,
+    "elevation_gain_m": 130
+   }
+  },
+  {
+   "year": 2022,
+   "sports": {
+    "running": {
+     "count": 160,
+     "distance_km": 2247.67,
+     "duration_h": 199.89,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 82
+    },
+    "cycling": {
+     "count": 913,
+     "distance_km": 5512.76,
+     "duration_h": 392.09,
+     "elevation_gain_m": 10216,
+     "elevation_records": 574,
+     "hr_records": 127
+    },
+    "hiking": {
+     "count": 19,
+     "distance_km": 155.03,
+     "duration_h": 40.73,
+     "elevation_gain_m": 5818,
+     "elevation_records": 5,
+     "hr_records": 0
+    }
+   },
+   "totals": {
+    "count": 1092,
+    "duration_h": 632.71,
+    "elevation_gain_m": 16034
+   }
+  },
+  {
+   "year": 2023,
+   "sports": {
+    "running": {
+     "count": 138,
+     "distance_km": 2051.66,
+     "duration_h": 185.64,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 137
+    },
+    "cycling": {
+     "count": 1130,
+     "distance_km": 6836.26,
+     "duration_h": 487.63,
+     "elevation_gain_m": 31427,
+     "elevation_records": 1123,
+     "hr_records": 594
+    },
+    "hiking": {
+     "count": 29,
+     "distance_km": 427.87,
+     "duration_h": 128.12,
+     "elevation_gain_m": 14708,
+     "elevation_records": 17,
+     "hr_records": 11
+    }
+   },
+   "totals": {
+    "count": 1297,
+    "duration_h": 801.39,
+    "elevation_gain_m": 46135
+   }
+  },
+  {
+   "year": 2024,
+   "sports": {
+    "running": {
+     "count": 145,
+     "distance_km": 2088.79,
+     "duration_h": 198.38,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 141
+    },
+    "cycling": {
+     "count": 791,
+     "distance_km": 5061.15,
+     "duration_h": 367.08,
+     "elevation_gain_m": 17647,
+     "elevation_records": 781,
+     "hr_records": 479
+    },
+    "hiking": {
+     "count": 11,
+     "distance_km": 131.06,
+     "duration_h": 26.11,
+     "elevation_gain_m": 2973,
+     "elevation_records": 4,
+     "hr_records": 3
+    }
+   },
+   "totals": {
+    "count": 947,
+    "duration_h": 591.57,
+    "elevation_gain_m": 20620
+   }
+  },
+  {
+   "year": 2025,
+   "sports": {
+    "running": {
+     "count": 142,
+     "distance_km": 2064.96,
+     "duration_h": 192.77,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 139
+    },
+    "cycling": {
+     "count": 1063,
+     "distance_km": 6205.08,
+     "duration_h": 424.26,
+     "elevation_gain_m": 23160,
+     "elevation_records": 1059,
+     "hr_records": 1062
+    },
+    "hiking": {
+     "count": 9,
+     "distance_km": 126.44,
+     "duration_h": 34.76,
+     "elevation_gain_m": 7452,
+     "elevation_records": 6,
+     "hr_records": 6
+    }
+   },
+   "totals": {
+    "count": 1214,
+    "duration_h": 651.79,
+    "elevation_gain_m": 30612
+   }
+  },
+  {
+   "year": 2026,
+   "sports": {
+    "running": {
+     "count": 117,
+     "distance_km": 1736.1,
+     "duration_h": 165.55,
+     "elevation_gain_m": null,
+     "elevation_records": 0,
+     "hr_records": 117
+    },
+    "cycling": {
+     "count": 1022,
+     "distance_km": 5766.53,
+     "duration_h": 389.57,
+     "elevation_gain_m": 19382,
+     "elevation_records": 1019,
+     "hr_records": 1021
+    },
+    "hiking": {
+     "count": 8,
+     "distance_km": 111.11,
+     "duration_h": 34.24,
+     "elevation_gain_m": 6524,
+     "elevation_records": 6,
+     "hr_records": 6
+    }
+   },
+   "totals": {
+    "count": 1147,
+    "duration_h": 589.36,
+    "elevation_gain_m": 25906
+   }
+  }
+ ],
+ "recent_months": [
+  {
+   "month": "2024-12",
+   "running": 8,
+   "cycling": 54,
+   "hiking": 0
+  },
+  {
+   "month": "2025-01",
+   "running": 14,
+   "cycling": 67,
+   "hiking": 0
+  },
+  {
+   "month": "2025-02",
+   "running": 12,
+   "cycling": 70,
+   "hiking": 0
+  },
+  {
+   "month": "2025-03",
+   "running": 11,
+   "cycling": 77,
+   "hiking": 0
+  },
+  {
+   "month": "2025-04",
+   "running": 15,
+   "cycling": 77,
+   "hiking": 1
+  },
+  {
+   "month": "2025-05",
+   "running": 11,
+   "cycling": 87,
+   "hiking": 3
+  },
+  {
+   "month": "2025-06",
+   "running": 12,
+   "cycling": 91,
+   "hiking": 0
+  },
+  {
+   "month": "2025-07",
+   "running": 12,
+   "cycling": 96,
+   "hiking": 0
+  },
+  {
+   "month": "2025-08",
+   "running": 11,
+   "cycling": 104,
+   "hiking": 0
+  },
+  {
+   "month": "2025-09",
+   "running": 11,
+   "cycling": 107,
+   "hiking": 0
+  },
+  {
+   "month": "2025-10",
+   "running": 11,
+   "cycling": 100,
+   "hiking": 3
+  },
+  {
+   "month": "2025-11",
+   "running": 10,
+   "cycling": 85,
+   "hiking": 0
+  },
+  {
+   "month": "2025-12",
+   "running": 12,
+   "cycling": 102,
+   "hiking": 2
+  },
+  {
+   "month": "2026-01",
+   "running": 12,
+   "cycling": 113,
+   "hiking": 0
+  },
+  {
+   "month": "2026-02",
+   "running": 11,
+   "cycling": 68,
+   "hiking": 1
+  },
+  {
+   "month": "2026-03",
+   "running": 13,
+   "cycling": 110,
+   "hiking": 0
+  },
+  {
+   "month": "2026-04",
+   "running": 14,
+   "cycling": 94,
+   "hiking": 1
+  },
+  {
+   "month": "2026-05",
+   "running": 11,
+   "cycling": 109,
+   "hiking": 1
+  },
+  {
+   "month": "2026-06",
+   "running": 12,
+   "cycling": 100,
+   "hiking": 0
+  },
+  {
+   "month": "2026-07",
+   "running": 12,
+   "cycling": 108,
+   "hiking": 0
+  },
+  {
+   "month": "2026-08",
+   "running": 11,
+   "cycling": 108,
+   "hiking": 0
+  },
+  {
+   "month": "2026-09",
+   "running": 9,
+   "cycling": 108,
+   "hiking": 1
+  },
+  {
+   "month": "2026-10",
+   "running": 10,
+   "cycling": 91,
+   "hiking": 4
+  },
+  {
+   "month": "2026-11",
+   "running": 2,
+   "cycling": 13,
+   "hiking": 0
+  }
+ ]
+}

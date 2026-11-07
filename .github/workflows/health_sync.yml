@@ -81,6 +81,12 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: python scripts/update_readme.py
 
+      - name: Build cross-sport index
+        # Aggregates the three sport repos' activities.json read-only. A network
+        # failure keeps the previous index instead of failing the health sync.
+        if: steps.gate.outputs.run == 'true'
+        run: python scripts/build_cross_sport.py --remote
+
       - name: Commit new data
         id: commit
         if: steps.gate.outputs.run == 'true'
@@ -124,7 +130,7 @@ jobs:
           # index.html so a new deploy never pairs new HTML with a stale
           # cached app.js (and vice-versa). The same hash is stamped into the
           # __BUILD_HASH__ sentinel in both files for the runtime stale guard.
-          V=$(cat dashboard/app.js dashboard/style.css | sha1sum | cut -c1-12)
+          V=$(cat dashboard/app.js dashboard/style.css dashboard/cross_sport.js | sha1sum | cut -c1-12)
           sed -i "s/__BUILD_HASH__/${V}/g" dashboard/index.html dashboard/app.js
           echo "asset build: ${V}"
           # fail the deploy if stamping did not take effect on both sides

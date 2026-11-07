@@ -19,6 +19,7 @@
       window.__ASSET_BUILD__ = "__BUILD_HASH__";
     </script>
     <script src="./chart.umd.min.js?v=__BUILD_HASH__" defer></script>
+    <script src="./cross_sport.js?v=__BUILD_HASH__" defer></script>
     <script src="./app.js?v=__BUILD_HASH__" defer></script>
   </head>
   <body>
@@ -30,12 +31,12 @@
           <span>zhubao315 的健康数据</span>
         </a>
         <div class="header-meta" id="header-meta" aria-label="个人档案摘要"></div>
-        <nav class="nav" aria-label="站点导航">
-          <a href="https://zhubao315.github.io/running/">跑步</a>
-          <a href="https://zhubao315.github.io/cycling/">骑行</a>
-          <a href="https://zhubao315.github.io/hiking/">徒步</a>
-          <a href="https://zhubao315.github.io/health/" aria-current="page">健康</a>
-          <a href="https://x.com/zhubao315" target="_blank" rel="noopener">X</a>
+        <nav class="nav" aria-label="四站导航">
+          <a href="https://zhubao315.github.io/health/" aria-current="page">HEALTH</a>
+          <a href="https://zhubao315.github.io/running/">RUNNING</a>
+          <a href="https://zhubao315.github.io/cycling/">CYCLING</a>
+          <a href="https://zhubao315.github.io/hiking/">HIKING</a>
+          <a class="nav-x" href="https://x.com/zhubao315" target="_blank" rel="noopener">X</a>
         </nav>
       </div>
     </header>
@@ -65,6 +66,8 @@
         <a href="#overview">概览</a>
         <a href="#recovery">恢复趋势</a>
         <a href="#training">训练与身体</a>
+        <a href="#profile">个人档案</a>
+        <a href="#cross-sport">跨运动</a>
         <a href="#correlation">相关性</a>
         <a href="#quality">数据质量</a>
       </nav>
@@ -332,7 +335,37 @@
         </div>
       </section>
 
-      <!-- ⑦ 数据质量与原始记录 -->
+      <!-- ⑥ 个人档案（基础资料与每日动态数据分开存储） -->
+      <section id="profile" aria-labelledby="profile-title">
+        <div class="section-head">
+          <h2 id="profile-title">Personal Profile · 个人档案</h2>
+          <span class="hint">基础资料固定 · 动态指标取最近一次真实测量</span>
+        </div>
+        <article class="card wide profile-card" id="profile-card"></article>
+        <p class="note">
+          身高为固定档案值（186 cm），体重与体脂取<strong>最近一次实际测量</strong>并标注日期；
+          缺失记录保持为空，不按 0 填充。年龄需要出生日期才能动态计算，档案中未提供出生日期，
+          因此这里不显示推测年龄。基础资料与每日动态数据分别存储，互不覆盖。
+        </p>
+      </section>
+
+      <!-- ⑦ 跨运动：跑步 / 骑行 / 徒步 年度汇总 -->
+      <section id="cross-sport" aria-labelledby="cross-sport-title">
+        <div class="section-head">
+          <h2 id="cross-sport-title">Cross-Sport · 跨运动</h2>
+          <span class="hint" id="cross-sport-updated">距离按项目分列，不做跨项目混加</span>
+        </div>
+        <div id="cross-sport-root" class="xsport-root">
+          <p class="empty-state">正在加载跨运动汇总…</p>
+        </div>
+        <p class="note">
+          数据来自三个运动站的原始 activities.json，按 (source, source_activity_id) 去重，
+          仅做聚合，不复制、不改写原始记录。距离只在同一项目内合计；总时长与累计爬升可跨项目相加，
+          但只累加真正记录了该字段的活动，覆盖率随数字一起显示。
+        </p>
+      </section>
+
+      <!-- ⑧ 数据质量与原始记录 -->
       <section id="quality" aria-labelledby="quality-title">
         <div class="section-head">
           <h2 id="quality-title">数据质量与原始记录</h2>

@@ -45,7 +45,7 @@ const showStaleBuildNotice = () => {
 // here so a metric keeps the same hue everywhere: sleep is indigo, HRV emerald,
 // resting heart rate rose, stress amber, steps/load cyan.
 const C = {
-  cyan: '#22d3ee',
+  cyan: '#38bdf8',
   sky: '#38bdf8',
   indigo: '#6366f1',
   purple: '#a855f7',
@@ -61,7 +61,7 @@ const C = {
   line: '#c7d2fe',
   lineDim: '#7c8795',
   // legacy aliases still referenced by a few call sites
-  accent: '#22d3ee',
+  accent: '#38bdf8',
   accent2: '#38bdf8',
   red: '#f43f5e',
   ok: '#10b981',
@@ -77,7 +77,7 @@ const hexA = (hex, alpha) => {
   const h = String(hex).replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const n = parseInt(full, 16);
-  if (Number.isNaN(n)) return `rgba(34, 211, 238, ${alpha})`;
+  if (Number.isNaN(n)) return `rgba(56, 189, 248, ${alpha})`;
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
@@ -387,8 +387,8 @@ const crosshairPlugin = {
     ctx.lineTo(x, chartArea.bottom);
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
-    ctx.shadowColor = 'rgba(34, 211, 238, 0.65)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.65)';
     ctx.shadowBlur = 10;
     ctx.stroke();
     ctx.restore();
@@ -406,7 +406,7 @@ const crosshairPlugin = {
       ctx.fillStyle = '#07090d';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.shadowColor = hexA(color.startsWith('#') ? color : '#22d3ee', 0.8);
+      ctx.shadowColor = hexA(color.startsWith('#') ? color : '#38bdf8', 0.8);
       ctx.shadowBlur = 8;
       ctx.fill();
       ctx.stroke();
@@ -525,7 +525,7 @@ const METRICS = [
   { key: 'hrv_avg', label: '夜间 HRV', unit: 'ms', fmt: (v) => `${num(v)} ms`, wake: true, color: '#10b981' },
   { key: 'rhr', label: '静息心率', unit: 'bpm', fmt: (v) => `${num(v)} bpm`, wake: false, color: '#f43f5e' },
   { key: 'stress_avg', label: '平均压力', unit: '分', fmt: (v) => num(v), wake: false, color: '#f59e0b' },
-  { key: 'load_short', label: '短期负荷', unit: '', fmt: (v) => num(v), wake: false, color: '#22d3ee' },
+  { key: 'load_short', label: '短期负荷', unit: '', fmt: (v) => num(v), wake: false, color: '#38bdf8' },
   { key: 'steps', label: '步数', unit: '步', fmt: (v) => num(v), wake: false, color: '#38bdf8' },
   { key: 'sleep_score', label: '睡眠分', unit: '分', fmt: (v) => num(v), wake: true, color: '#a855f7' },
 ];
@@ -1059,7 +1059,18 @@ const renderProfile = () => {
       <span class="profile-label">BMI</span>
       <span class="profile-value">${bmi == null ? '暂无数据' : num(bmi, 1)}<small>${bmi == null ? '' : ''}</small></span>
       <span class="profile-note">${bmi == null ? '需要有效体重' : `按身高 ${height} cm 计算`}</span>
-    </div>`;
+    </div>
+    <div class="profile-item">
+      <span class="profile-label">体脂率</span>
+      <span class="profile-value">${last && last.body_fat_pct != null ? num(last.body_fat_pct, 1) : '暂无数据'}<small>${last && last.body_fat_pct != null ? '%' : ''}</small></span>
+      <span class="profile-note">${last && last.body_fat_pct != null ? last.date : '没有体脂记录'}</span>
+    </div>
+    <div class="profile-item">
+      <span class="profile-label">年龄</span>
+      <span class="profile-value">未提供<small></small></span>
+      <span class="profile-note">档案缺出生日期，不做推测</span>
+    </div>
+    <p class="profile-footnote">基础资料（身高 186 cm、出生日期）与每日动态数据分开存储；体重与体脂取最近一次真实测量${last ? `（${last.date}）` : ''}，缺失不按 0 填充。</p>`;
 };
 
 // ---------------------------------------------------- executive summary
@@ -1323,7 +1334,7 @@ const renderBodyScatter = () => {
     byYear.get(y).push({ x: r.bmi, y: r.body_fat_pct, date: r.date });
   }
   const palette = [
-    '#22d3ee', '#38bdf8', '#6366f1', '#a855f7', '#f43f5e',
+    '#38bdf8', '#38bdf8', '#6366f1', '#a855f7', '#f43f5e',
     '#f59e0b', '#10b981', '#818cf8', '#fb7185', '#2dd4bf',
   ];
   const years = [...byYear.keys()].sort();
@@ -1680,7 +1691,7 @@ const renderSleepChart = () => {
           label: st.label,
           data: rows.map((r) => r[st.key]),
           backgroundColor: barFill(st.color, 0.92, 0.55),
-          borderColor: 'rgba(9, 10, 15, 0.55)',
+          borderColor: 'rgba(11, 29, 51, 0.55)',
           borderWidth: { top: 1, left: 0, right: 0, bottom: 0 },
           borderRadius: 4,
           borderSkipped: false,
@@ -1914,6 +1925,7 @@ const RENDER_STEPS = [
   { label: '训练负荷', run: () => renderLoadCharts(), anchor: '#loadChart' },
   { label: '周训练量', run: () => renderTrainingChart(), anchor: '#trainingChart' },
   { label: '个人档案', run: () => renderProfilePills(), anchor: '#overview' },
+  { label: '档案卡', run: () => renderProfile(), anchor: '#profile-card' },
   { label: '四问速览', run: () => renderExecutiveSummary(), anchor: '#exec-summary' },
   { label: '体重与体脂', run: () => renderBodyCharts(), anchor: '#weightChart' },
   { label: '相关性散点', run: () => renderCorrChart(), anchor: '#corrChart' },
