@@ -88,6 +88,115 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:8021/index.html';
   console.log('focused after 30 tabs:', focused);
   expect(focused !== 'none', 'keyboard navigation lands on an element');
 
+  // --- correlation lag switch must refresh the quantile panel as well ------
+  // The bucket panel states the lag it was computed with; switching the lag
+  // only redrew the scatter plot before, so the two halves disagreed.
+  const lag = page.locator('#corr-lag');
+  if (await lag.count()) {
+    const before = await page.locator('#corr-buckets .hint').innerText().catch(() => '');
+    await lag.selectOption('2');
+    await page.waitForTimeout(400);
+    const after = await page.locator('#corr-buckets .hint').innerText().catch(() => '');
+    console.log('corr-buckets hint:', before.replace(/\n/g, ' | '), '->', after.replace(/\n/g, ' | '));
+    expect(after.includes('滞后 2 天'), `bucket panel lag label follows the lag switch (got "${after}")`);
+    expect(after !== before, 'bucket panel is re-rendered when the lag changes');
+    await lag.selectOption('1');
+    await page.waitForTimeout(200);
+  }
+
+  // --- custom range must drive the correlation window as well -------------
+  // The scatter plot and the quantile panel used to ignore the custom
+  // start/end range and kept filtering by the preset day count.
+  const heatDates = await page.evaluate(() =>
+    [...document.querySelectorAll('.hcell')].map((c) => c.dataset.date).filter(Boolean)
+  );
+  if (heatDates.length > 40) {
+    const end = heatDates[heatDates.length - 1];
+    const startDate = new Date(end + 'T00:00:00Z');
+    startDate.setUTCDate(startDate.getUTCDate() - 29);
+    const start = startDate.toISOString().slice(0, 10);
+    const corrPoints = () =>
+      page.evaluate(() => {
+        const chart = window.Chart && Chart.getChart('corrChart');
+        return chart ? chart.data.datasets[0].data.length : -1;
+      });
+    const before = await corrPoints();
+    await page.locator('#custom-toggle').click();
+    await page.locator('#range-start').fill(start);
+    await page.locator('#range-end').fill(end);
+    await page.locator('#range-apply').click();
+    await page.waitForTimeout(700);
+    const after = await corrPoints();
+    console.log(`corr points: preset=${before} custom(${start}..${end})=${after}`);
+    expect(
+      after >= 0 && after < before,
+      `custom range narrows the correlation window (${before} -> ${after})`
+    );
+    // restore the preset view for the remaining checks
+    await page.locator('#range button[data-range="90"]').click();
+    await page.waitForTimeout(400);
+  }
+
+  // --- body module keeps its own timeline ---------------------------------
+  // Default view is "all history", so the card must not be empty even though
+  // the top bar starts on the last 90 days.
+  const bodyCards = await page.locator('#body-metrics .metric-card').count();
+  expect(bodyCards > 0, `expect body metric cards on first paint, got ${bodyCards}`);
+  const bodyHint = await page.locator('#body-hint').innerText().catch(() => '');
+  console.log('body hint:', bodyHint.replace(/\n/g, ' | '));
+  expect(bodyHint.includes('独立时间轴'), 'body card states that it has its own time axis');
+
+  // switching the body range to "follow the top bar" must not crash and has
+  // to re-label the card
+  const bodyFollow = page.locator('#body-range button[data-body-range="follow"]');
+  if (await bodyFollow.count()) {
+    await bodyFollow.click();
+    await page.waitForTimeout(400);
+    const followHint = await page.locator('#body-hint').innerText().catch(() => '');
+    console.log('body hint (follow):', followHint.replace(/\n/g, ' | '));
+    expect(followHint.includes('跟随顶栏'), 'body range switch updates the card hint');
+    await page.locator('#body-range button[data-body-range="all"]').click();
+    await page.waitForTimeout(300);
+  }
+
+  // --- legacy engine compatibility pass ----------------------------------
+  // Older mobile WebViews and headless renderers ship without
+  // Array.prototype.at (ES2022) and Canvas2D roundRect. Removing both before
+  // the page scripts run proves the dashboard no longer depends on them.
+  const legacy = await browser.newPage({ viewport: { width: 1360, height: 900 } });
+  await legacy.addInitScript(() => {
+    try { delete Array.prototype.at; } catch (e) { /* ignore */ }
+    try {
+      if (window.CanvasRenderingContext2D) delete CanvasRenderingContext2D.prototype.roundRect;
+    } catch (e) { /* ignore */ }
+  });
+  const legacyProblems = [];
+  legacy.on('pageerror', (e) => legacyProblems.push(`pageerror: ${e.message}`));
+  legacy.on('console', (m) => {
+    if (m.type() === 'error') legacyProblems.push(`console.error: ${m.text()}`);
+  });
+  await legacy.goto(url, { waitUntil: 'networkidle' });
+  await legacy.waitForTimeout(1500);
+  const legacyState = await legacy.evaluate(() => ({
+    at: typeof Array.prototype.at,
+    kpis: document.querySelectorAll('.kpi').length,
+    label: document.querySelector('#kpis .kpi .label')?.textContent || '',
+    bodyCards: document.querySelectorAll('#body-metrics .metric-card').length,
+  }));
+  console.log('legacy engine state:', JSON.stringify(legacyState));
+  expect(legacyState.at === 'undefined', 'legacy pass really removed Array.prototype.at');
+  expect(
+    legacyProblems.length === 0,
+    `legacy engine pass raised errors: ${legacyProblems.join(' | ')}`
+  );
+  expect(legacyState.kpis >= 6, `legacy engine pass still renders KPIs, got ${legacyState.kpis}`);
+  expect(
+    !legacyState.label.includes('失败'),
+    `legacy engine pass must not show a fatal banner (got "${legacyState.label}")`
+  );
+  expect(legacyState.bodyCards > 0, 'legacy engine pass still renders the body card');
+  await legacy.close();
+
   await page.screenshot({ path: process.env.SMOKE_SHOT || '/tmp/dashboard_smoke.png' });
 
   if (problems.length) {

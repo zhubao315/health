@@ -503,6 +503,21 @@ const addDays = (iso, delta) => {
   return d.toISOString().slice(0, 10);
 };
 
+// Last element of an array without Array.prototype.at (ES2022). Older mobile
+// WebViews, embedded browsers and headless renderers still ship without it,
+// and a single "… is not a function" used to abort the whole dashboard.
+// Indexing explicitly keeps the panel alive on every engine we support.
+const lastOf = (arr) => (Array.isArray(arr) && arr.length ? arr[arr.length - 1] : undefined);
+
+// Minimal HTML escaping for free-text that arrives from the device feed
+// (sport names, captions). Numeric helpers do not need it.
+const escHtml = (v) =>
+  String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 // ------------------------------------------------------------------- state
 
 const state = {
@@ -518,6 +533,9 @@ const state = {
   data: null,
   quality: null,
   rangeRows: [],
+  // body module time axis: 0 = all history, 365 = last year, 'follow' = the
+  // global range selector (see BODY_RANGE_LABELS).
+  bodyRange: 0,
 };
 
 const METRICS = [
@@ -649,8 +667,8 @@ const areaSparkline = (values, color) => {
   });
   if (pts.length < 2) return '';
   const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-  const area = `${line} L${pts.at(-1)[0].toFixed(1)},28 L${pts[0][0].toFixed(1)},28 Z`;
-  const [lx, ly] = pts.at(-1);
+  const area = `${line} L${lastOf(pts)[0].toFixed(1)},28 L${pts[0][0].toFixed(1)},28 Z`;
+  const [lx, ly] = lastOf(pts);
   const id = `sg${Math.random().toString(36).slice(2, 8)}`;
   return `<svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
     <defs>
@@ -722,7 +740,7 @@ const bulletBar = (m, value, v7, v28, sd) => {
 const buildKpis = () => {
   const d = state.data;
   const latestDate =
-    d.coverage?.daily_health?.end || state.rangeRows.at(-1)?.date || '';
+    d.coverage?.daily_health?.end || lastOf(state.rangeRows)?.date || '';
   // 28-day SD around the latest day, for the normal-range band on the bullet
   const sdAt = (key) => {
     const band = baselineBand(d.daily.map((r) => r[key]));
@@ -938,30 +956,63 @@ const withLegend = (opts, show = true) => ({
 });
 
 // ------------------------------------------------- body composition (scale)
-// Every body view follows the global range selector: the presets filter by
-// calendar days (7/30/90/365/all) and the custom range filters by its dates.
+// The scale writes on its own, sparse timeline (a weigh-in every few weeks
+// since 2018). The module therefore owns its range switch instead of blindly
+// inheriting the daily-health window — otherwise a 90-day preset would empty
+// the card even though eight years of weigh-ins are on file.
+//   bodyRange: 0 = all history, 365 = last year, 'follow' = global selector.
+
+const BODY_RANGE_LABELS = {
+  0: '全部历史',
+  365: '近 1 年',
+  follow: '跟随顶栏时间范围',
+};
 
 const bodyAnchor = () => {
-  const lastDaily = state.rangeRows.at(-1)?.date;
-  const lastBody = state.data.body?.at(-1)?.date;
+  const lastDaily = lastOf(state.rangeRows)?.date;
+  const lastBody = lastOf(state.data.body)?.date;
   if (!lastDaily) return lastBody;
   if (!lastBody) return lastDaily;
   return lastDaily > lastBody ? lastDaily : lastBody;
 };
 
+// The window the *global* (top bar) selector currently describes. Used to
+// highlight the weigh-ins that fall into it even when the body card shows a
+// longer history of its own.
+const globalWindowBounds = () => {
+  if (state.customRange) return { start: state.customRange.start, end: state.customRange.end };
+  const rows = state.rangeRows || [];
+  if (!rows.length) return null;
+  return { start: rows[0].date, end: lastOf(rows).date };
+};
+
+const inGlobalWindow = (date) => {
+  const b = globalWindowBounds();
+  return !!b && date >= b.start && date <= b.end;
+};
+
+const bodyWindowBounds = () => {
+  const rows = state.data.body || [];
+  if (!rows.length) return null;
+  if (state.bodyRange === 'follow') {
+    if (state.customRange) return { start: state.customRange.start, end: state.customRange.end };
+    if (state.range === 0) return { start: rows[0].date, end: lastOf(rows).date };
+    const anchor = bodyAnchor();
+    if (!anchor) return null;
+    return { start: addDays(anchor, -(state.range - 1)), end: anchor };
+  }
+  if (state.bodyRange === 365) {
+    const anchor = lastOf(rows).date;
+    return { start: addDays(anchor, -364), end: anchor };
+  }
+  return { start: rows[0].date, end: lastOf(rows).date };
+};
+
 const bodyRows = () => {
   const rows = state.data.body || [];
-  if (state.customRange) {
-    return rows.filter(
-      (r) => r.date >= state.customRange.start && r.date <= state.customRange.end
-    );
-  }
-  if (state.range === 0) return rows;
-  const anchor = bodyAnchor();
-  if (!anchor) return rows;
-  const start = new Date(new Date(anchor + 'T00:00:00').getTime() - (state.range - 1) * 86400000);
-  const startISO = start.toISOString().slice(0, 10);
-  return rows.filter((r) => r.date >= startISO);
+  const bounds = bodyWindowBounds();
+  if (!bounds || !bounds.start || !bounds.end) return [];
+  return rows.filter((r) => r.date >= bounds.start && r.date <= bounds.end);
 };
 
 const rolling7 = (values, minObs = 4) =>
@@ -1022,9 +1073,9 @@ const renderProfilePills = () => {
   if (!box && !alt) return;
   const h = state.data.profile?.height_cm ?? 186;
   const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
-  const last = rows.at(-1);
+  const last = lastOf(rows);
   const bmi = last ? bmiOf(last.weight_kg) : null;
-  const latest = state.data.daily?.at(-1)?.date;
+  const latest = lastOf(state.data.daily)?.date;
   const html = [
     `<span class="pill-meta">身高 ${h} cm</span>`,
     last ? `<span class="pill-meta">体重 ${num(last.weight_kg, 1)} kg</span>` : '',
@@ -1042,7 +1093,7 @@ const renderProfile = () => {
   if (!box) return;
   const height = state.data.profile?.height_cm ?? 186;
   const rows = (state.data.body || []).filter((r) => r.weight_kg != null);
-  const last = rows.at(-1) || null;
+  const last = lastOf(rows) || null;
   const bmi = last ? bmiOf(last.weight_kg) : null;
   box.innerHTML = `
     <div class="profile-main">
@@ -1092,7 +1143,7 @@ const pctDelta = (value, base) =>
 const execStateCard = () => {
   const d = state.data;
   const rows = d.daily;
-  const last = rows.at(-1);
+  const last = lastOf(rows);
   if (!last) return { title: '近期状态 vs 基线', body: '暂无数据', tone: 'muted', icon: 'state' };
   const specs = [
     ['sleep_total_min', '睡眠', true],
@@ -1492,7 +1543,7 @@ const destroyBodyCharts = () => {
 const rangeStartDate = () => {
   if (state.customRange) return state.customRange.start;
   if (state.range === 0) return null;
-  const anchor = state.rangeRows.at(-1)?.date;
+  const anchor = lastOf(state.rangeRows)?.date;
   if (!anchor) return null;
   const d = new Date(
     new Date(anchor + 'T00:00:00').getTime() - (state.range - 1) * 86400000
@@ -1553,19 +1604,36 @@ const renderTrainingChart = () => {
   }
 };
 
+const renderBodyHint = () => {
+  const el = document.getElementById('body-hint');
+  if (!el) return;
+  const mode = BODY_RANGE_LABELS[state.bodyRange] || BODY_RANGE_LABELS[0];
+  const rows = bodyRows();
+  const span = rows.length
+    ? `${rows[0].date} → ${lastOf(rows).date}（${rows.length} 次称重）`
+    : '当前范围内暂无称重记录';
+  const marked = rows.filter((r) => inGlobalWindow(r.date)).length;
+  const mark = state.bodyRange === 'follow' ? '' : ` · 顶栏窗口内 ${marked} 次已高亮`;
+  el.innerHTML =
+    `<span class="tag-independent">独立时间轴</span> 好轻体脂秤 · 2018 年起按称重日记录` +
+    ` · 当前：${mode} · ${span}${mark}`;
+};
+
 const renderBodyCharts = () => {
   const empty = document.getElementById('body-empty');
   const grid = document.querySelector('#body-card .body-charts');
   const rows = bodyRows();
   const enough = rows.length >= 2;
+  const mode = BODY_RANGE_LABELS[state.bodyRange] || BODY_RANGE_LABELS[0];
   // a single weigh-in still gives a valid latest value, just no trend
   if (empty) {
     empty.hidden = enough;
     empty.textContent =
       rows.length === 0
-        ? '当前时间范围内没有称重记录。切换到更长的时间范围，或下次称重后会自动出现。'
-        : '当前时间范围内只有 1 次称重，不足以画趋势；最新一次已显示在上方。';
+        ? `当前范围（${mode}）内没有称重记录。切换上方「全部 / 近 1 年 / 跟随顶栏」，或下次称重后会自动出现。`
+        : `当前范围（${mode}）内只有 1 次称重，不足以画趋势；最新一次已显示在上方。`;
   }
+  renderBodyHint();
   if (grid) grid.hidden = !enough;
   if (!rows.length) {
     destroyBodyCharts();
@@ -1593,9 +1661,12 @@ const renderBodyCharts = () => {
             data: w.values,
             fill: true,
             backgroundColor: areaFill(C.sky, 0.26),
-            pointRadius: 2.4,
+            // weigh-ins that fall into the global (top bar) window are marked,
+            // so the card can show more history without hiding the overlap
+            pointRadius: (c) => (inGlobalWindow(w.labels[c.dataIndex]) ? 4.4 : 2.4),
             pointHoverRadius: 5,
-            pointBackgroundColor: '#07090d',
+            pointBackgroundColor: (c) =>
+              inGlobalWindow(w.labels[c.dataIndex]) ? hexA(C.sky, 0.95) : '#07090d',
             pointBorderColor: C.sky,
             pointBorderWidth: 1.6,
           }),
@@ -1621,9 +1692,10 @@ const renderBodyCharts = () => {
             data: f.values,
             fill: true,
             backgroundColor: areaFill(C.amber, 0.26),
-            pointRadius: 2.4,
+            pointRadius: (c) => (inGlobalWindow(f.labels[c.dataIndex]) ? 4.4 : 2.4),
             pointHoverRadius: 5,
-            pointBackgroundColor: '#07090d',
+            pointBackgroundColor: (c) =>
+              inGlobalWindow(f.labels[c.dataIndex]) ? hexA(C.amber, 0.95) : '#07090d',
             pointBorderColor: C.amber,
             pointBorderWidth: 1.6,
           }),
@@ -1662,7 +1734,14 @@ const missingStagePlugin = {
       const y = chartArea.bottom - h - 2;
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(x - w / 2, y, w, h, 3);
+      // Canvas2D.roundRect is ES2023-ish: Safari < 16 and older Android
+      // WebViews do not have it. Fall back to a plain rectangle so the
+      // "stage missing" marker still shows up instead of throwing.
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x - w / 2, y, w, h, 3);
+      } else {
+        ctx.rect(x - w / 2, y, w, h);
+      }
       ctx.fillStyle = hatchPattern(chart, 'rgba(148, 163, 184, 0.55)');
       ctx.fill();
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
@@ -1985,15 +2064,21 @@ const corrPairs = () => {
   const def = CORR_DEFS[state.corrKey];
   const all = state.data.daily;
   const by = new Map(all.map((r) => [r.date, r]));
+  // The correlation window must be the very same window every other module
+  // uses. state.rangeRows already honours the preset range *and* the custom
+  // start/end range, so keying on its date set keeps one single definition of
+  // "current window" across the whole dashboard.
+  const windowRows = state.rangeRows && state.rangeRows.length ? state.rangeRows : all;
+  const inWindow = new Set(windowRows.map((r) => r.date));
   const pairs = [];
   for (const r of all) {
+    if (!inWindow.has(r.date)) continue;
     const target = by.get(addDays(r.date, state.corrLag));
     if (!target) continue;
     const x = r[def.x];
     const y = target[def.y];
     if (x === null || x === undefined || y === null || y === undefined) continue;
-    const inRange = !state.range || all.indexOf(r) >= all.length - state.range;
-    if (inRange) pairs.push({ x, y, date: r.date });
+    pairs.push({ x, y, date: r.date });
   }
   return { def, pairs };
 };
@@ -2247,7 +2332,7 @@ const renderHeatmap = () => {
 
   const months = new Map();
   for (const r of all) {
-    if (r.date < addDays(all.at(-1).date, -400)) continue;
+    if (r.date < addDays(lastOf(all).date, -400)) continue;
     const monthKey = r.date.slice(0, 7);
     if (!months.has(monthKey)) months.set(monthKey, []);
     months.get(monthKey).push(r);
@@ -2307,7 +2392,10 @@ const contextTable = (date) => {
     const r = rows.find((x) => x.date === day);
     const sport = acts
       .filter((a) => a.date === day)
-      .map((a) => `${a.sport}${a.distance_km ? ` ${num(a.distance_km, 1)}km` : ''}`)
+      .map(
+        (a) =>
+          `${sportLink(a.sport, a.date)}${a.distance_km ? ` ${num(a.distance_km, 1)}km` : ''}`
+      )
       .join('、');
     const v = (x, digits = 0) => (x == null ? '缺失' : num(x, digits));
     cells.push(`<tr class="${d === 0 ? 'ctx-today' : ''}">
@@ -2359,16 +2447,68 @@ const renderDayDetail = () => {
       <div><b>恢复相关（同为醒来日）</b> HRV ${num(row.hrv_avg)} ms（基线 ${num(row.hrv_baseline)} ms）· 睡眠均心率 ${num(row.sleep_hr_avg)} bpm</div>
       <div><b>本日（自然日）</b> 静息 ${num(row.rhr)} bpm · 日均 ${num(row.avg_hr)} bpm · 压力 ${num(row.stress_avg)} 分 · 步数 ${num(row.steps)} · 负荷短/长 ${num(row.load_short)}/${num(row.load_long)}（比 ${num(row.load_ratio, 2)}）</div>
       <div><b>训练背景（−1/0/+1 天）</b>
-        ${acts.length ? acts.map((a) => `<span class="tag">${a.date} ${a.sport}${a.distance_km ? ` ${num(a.distance_km, 2)} km` : ''}${a.duration_min ? ` ${num(a.duration_min)} min` : ''}</span>`).join('') : '无记录（或超出近 90 天范围）'}
+        ${acts.length ? acts.map((a) => `<span class="tag">${a.date} ${sportLink(a.sport, a.date)}${a.distance_km ? ` ${num(a.distance_km, 2)} km` : ''}${a.duration_min ? ` ${num(a.duration_min)} min` : ''}</span>`).join('') : '无记录（或超出近 90 天范围）'}
       </div>
       <div><b>状态</b> ${row.stage_completeness < 1 ? `睡眠分期完整性 ${Math.round(row.stage_completeness * 100)}%（缺失段按缺失显示）` : '分期完整'}</div>
     </div>
     ${contextTable(date)}`;
   document.getElementById('dd-close').onclick = () => {
     state.selectedDate = null;
+    syncUrlDate(null);
     renderDayDetail();
     renderHeatmap();
   };
+};
+
+// --------------------------------------------------- URL <-> selected date
+// ?date=YYYY-MM-DD opens that day in the metric calendar; picking a cell in
+// the calendar writes the date back into the address bar so the view can be
+// shared or bookmarked.
+
+const syncUrlDate = (date) => {
+  if (!window.history || !window.history.replaceState) return;
+  const url = new URL(window.location.href);
+  if (date) url.searchParams.set('date', date);
+  else url.searchParams.delete('date');
+  window.history.replaceState({}, '', url.toString());
+};
+
+const readUrlDate = () => {
+  try {
+    const value = new URLSearchParams(window.location.search).get('date');
+    return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+// ------------------------------------------------------- cross-site deep link
+// The three sport sites share the same personal data set. Every activity row
+// can therefore jump to the matching site, pinned to the exact day, instead of
+// asking the reader to hunt for the record by hand.
+
+const SPORT_SITE_BASE = {
+  running: 'https://zhubao315.github.io/running/',
+  cycling: 'https://zhubao315.github.io/cycling/',
+  hiking: 'https://zhubao315.github.io/hiking/',
+};
+
+const sportSite = (sport) => {
+  const s = String(sport || '').toLowerCase();
+  if (!s) return null;
+  if (s.includes('hik') || s.includes('trek')) return 'hiking';
+  if (s.includes('run')) return 'running';
+  if (s.includes('cycl') || s.includes('bike') || s.includes('rid')) return 'cycling';
+  return null;
+};
+
+// A sport label that links to the owning site, pinned to `date`.
+const sportLink = (sport, date) => {
+  const label = escHtml(sport || '—');
+  const site = sportSite(sport);
+  if (!site || !date) return label;
+  const url = `${SPORT_SITE_BASE[site]}?date=${encodeURIComponent(date)}`;
+  return `<a class="sport-link" href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 };
 
 // ------------------------------------------------------------- activities
@@ -2379,7 +2519,7 @@ const renderActivities = () => {
     .reverse();
   const rowsHtml = acts
     .map(
-      (a) => `<tr><td>${a.date}</td><td>${a.sport}</td>
+      (a) => `<tr><td>${a.date}</td><td>${sportLink(a.sport, a.date)}</td>
       <td>${a.distance_km ? num(a.distance_km, 2) + ' km' : '—'}</td>
       <td>${a.duration_min ? num(a.duration_min) + ' min' : '—'}</td>
       <td>${a.avg_hr ? num(a.avg_hr) + ' bpm' : '—'}</td>
@@ -2389,7 +2529,7 @@ const renderActivities = () => {
   document.getElementById('activities').innerHTML = `
     <thead><tr><th>日期</th><th>类型</th><th>距离</th><th>时长</th><th>均心率</th><th>卡路里</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="6">暂无运动记录</td></tr>'}</tbody>
-    <caption>显示最近 ${acts.length} 条（完整列表见 data/activities.csv，注意其中含城市级位置字段）</caption>`;
+    <caption>显示最近 ${acts.length} 条（完整列表见 data/activities.csv，注意其中含城市级位置字段）；项目名可点击跳转到对应运动站的当日视图</caption>`;
 };
 
 // ------------------------------------------------------------- insights
@@ -2608,7 +2748,7 @@ const renderCoverage = () => {
 
 const renderChartTable = (id) => {
   const rows = state.rangeRows;
-  const r = rows.at(-1) || {};
+  const r = lastOf(rows) || {};
   const defs = {
     sleepChart: {
       cols: ['日期', '总时长', '深睡', '浅睡', 'REM', '清醒', '完整性'],
@@ -2854,11 +2994,16 @@ const init = async () => {
   document.getElementById('corr-select').addEventListener('change', (e) => {
     state.corrKey = Number(e.target.value);
     renderCorrChart();
+    // the quantile panel is derived from the same pairs as the scatter plot,
+    // so it has to be redrawn whenever the relation changes
+    renderCorrBuckets();
     renderCorrStats();
   });
   document.getElementById('corr-lag').addEventListener('change', (e) => {
     state.corrLag = Number(e.target.value);
     renderCorrChart();
+    // the bucket header states the lag it was computed with — keep it in sync
+    renderCorrBuckets();
   });
 
   document.getElementById('heat-metric').addEventListener('change', (e) => {
@@ -2866,10 +3011,28 @@ const init = async () => {
     renderHeatmap();
   });
 
+  // body module owns its time axis (all / last year / follow the top bar)
+  const bodyRangeBox = document.getElementById('body-range');
+  if (bodyRangeBox) {
+    bodyRangeBox.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-body-range]');
+      if (!btn) return;
+      const raw = btn.dataset.bodyRange;
+      state.bodyRange = raw === 'follow' ? 'follow' : Number(raw);
+      bodyRangeBox.querySelectorAll('button[data-body-range]').forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      renderBodyCharts();
+    });
+  }
+
   document.getElementById('heatmap').addEventListener('click', (e) => {
     const cell = e.target.closest('.hcell');
     if (!cell) return;
     state.selectedDate = cell.dataset.date;
+    syncUrlDate(state.selectedDate);
     renderDayDetail();
     renderHeatmap();
   });
@@ -2982,6 +3145,17 @@ const init = async () => {
   wireTables();
   applyRange(90);
   initSectionSpy();
+
+  // deep link: ?date=YYYY-MM-DD jumps straight to that day in the calendar
+  const wanted = readUrlDate();
+  if (wanted && state.data.daily.some((r) => r.date === wanted)) {
+    state.selectedDate = wanted;
+    renderDayDetail();
+    renderHeatmap();
+    requestAnimationFrame(() => {
+      document.getElementById('day-detail')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
 
   // phones start with the compact daily table (5 core columns)
   if (window.matchMedia('(max-width: 767px)').matches) {

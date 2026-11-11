@@ -264,13 +264,18 @@
 <article class="card wide" id="body-card">
             <div class="card-head">
               <h3>体重与体脂</h3>
-              <span class="hint" id="body-hint"><span class="tag-independent">独立时间轴</span> 好轻体脂秤 · 2018 年起按称重日记录 · 不受顶部时间范围过滤</span>
+              <span class="hint" id="body-hint"><span class="tag-independent">独立时间轴</span> 好轻体脂秤 · 2018 年起按称重日记录</span>
               <div class="card-tools">
+                <div class="subrange" id="body-range" role="group" aria-label="体重模块时间范围">
+                  <button type="button" data-body-range="all" class="active" aria-pressed="true">全部</button>
+                  <button type="button" data-body-range="365" aria-pressed="false">近 1 年</button>
+                  <button type="button" data-body-range="follow" aria-pressed="false">跟随顶栏</button>
+                </div>
                 <button type="button" class="tool" data-table-for="weightChart" aria-expanded="false">数据表</button>
               </div>
             </div>
             <div class="body-metrics" id="body-metrics"></div>
-            <p class="body-empty" id="body-empty" hidden>当前时间范围内没有称重记录。切换到更长的时间范围，或下次称重后会自动出现。</p>
+            <p class="body-empty" id="body-empty" hidden>当前范围（全部历史）内没有称重记录。切换上方「全部 / 近 1 年 / 跟随顶栏」，或下次称重后会自动出现。</p>
             <div class="body-charts">
               <div class="chart-box"><canvas id="weightChart" role="img"
                   aria-label="体重随时间的走势，含最近 7 次称重的均值"></canvas></div>

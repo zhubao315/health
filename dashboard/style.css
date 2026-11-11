@@ -145,6 +145,18 @@ a {
   text-decoration: none;
 }
 
+/* cross-site jump (health → running / cycling / hiking) */
+.sport-link {
+  color: var(--accent);
+  border-bottom: 1px dotted rgba(56, 189, 248, 0.5);
+  white-space: nowrap;
+}
+
+.sport-link:hover {
+  color: #a5f3fc;
+  border-bottom-style: solid;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -609,6 +621,41 @@ h1 {
   display: inline-flex;
   gap: 0.3rem;
   align-items: center;
+}
+
+/* small segmented switch (body module time axis) — same groove as .range but
+   sized for a card header instead of the sticky top bar */
+.subrange {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.subrange button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.subrange button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.subrange button.active {
+  color: #a5f3fc;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.1));
+  border-color: rgba(56, 189, 248, 0.32);
+  font-weight: 600;
 }
 
 .tool {
