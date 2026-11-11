@@ -159,6 +159,32 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:8021/index.html';
     await page.waitForTimeout(300);
   }
 
+  // --- the recent activities link to the sport sites ----------------------
+  // The activity rows are the bridge between the health dashboard and the
+  // three sport sites: a sport name jumps to that site's view of the day.
+  const activities = await page.evaluate(() => {
+    const rows = document.querySelectorAll('#activities tbody tr');
+    const links = [...document.querySelectorAll('#activities a.sport-link')];
+    return {
+      rows: rows.length,
+      links: links.length,
+      hrefs: links.slice(0, 3).map((a) => a.getAttribute('href')),
+    };
+  });
+  expect(activities.rows > 0, `the recent activities table has rows (got ${activities.rows})`);
+  expect(
+    activities.links === activities.rows,
+    `every activity row links to its sport site (${activities.links}/${activities.rows})`
+  );
+  expect(
+    activities.hrefs.every((href) =>
+      /^https:\/\/zhubao315\.github\.io\/(running|cycling|hiking)\/\?date=\d{4}-\d{2}-\d{2}$/.test(
+        href || ''
+      )
+    ),
+    `the activity links address the right site and day (${activities.hrefs.join(' ')})`
+  );
+
   // --- legacy engine compatibility pass ----------------------------------
   // Older mobile WebViews and headless renderers ship without
   // Array.prototype.at (ES2022) and Canvas2D roundRect. Removing both before
