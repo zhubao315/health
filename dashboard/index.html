@@ -12,6 +12,22 @@
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="stylesheet" href="./style.css?v=__BUILD_HASH__" />
+    <script>
+      // Theme before the first paint: the four sites share one key on the
+      // same origin, so the theme picked on one of them is the theme here.
+      // Without this the page would paint dark and then flip to light.
+      (() => {
+        try {
+          const saved = localStorage.getItem('zhubao315-theme');
+          const theme = saved === 'light' || saved === 'dark' ? saved : 'dark';
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch (error) {
+          document.documentElement.dataset.theme = 'dark';
+          document.documentElement.style.colorScheme = 'dark';
+        }
+      })();
+    </script>
     <!-- Build sentinel: __BUILD_HASH__ is stamped by the deploy workflow with a
          content hash. app.js compares its own stamped value against this one;
          a cached/stale pair shows a refresh hint instead of crashing. -->
@@ -31,13 +47,32 @@
           <span>zhubao315 的健康数据</span>
         </a>
         <div class="header-meta" id="header-meta" aria-label="个人档案摘要"></div>
-        <nav class="nav" aria-label="四站导航">
-          <a href="https://zhubao315.github.io/health/" aria-current="page">HEALTH</a>
-          <a href="https://zhubao315.github.io/running/">RUNNING</a>
-          <a href="https://zhubao315.github.io/cycling/">CYCLING</a>
-          <a href="https://zhubao315.github.io/hiking/">HIKING</a>
+        <nav class="nav" aria-label="运动与健康站点导航">
+          <a data-site="health" href="https://zhubao315.github.io/health/" aria-current="page">
+            <span class="nav-zh">健康</span><span class="nav-en">HEALTH</span>
+          </a>
+          <a data-site="running" href="https://zhubao315.github.io/running/">
+            <span class="nav-zh">跑步</span><span class="nav-en">RUNNING</span>
+          </a>
+          <a data-site="cycling" href="https://zhubao315.github.io/cycling/">
+            <span class="nav-zh">骑行</span><span class="nav-en">CYCLING</span>
+          </a>
+          <a data-site="hiking" href="https://zhubao315.github.io/hiking/">
+            <span class="nav-zh">徒步</span><span class="nav-en">HIKING</span>
+          </a>
           <a class="nav-x" href="https://x.com/zhubao315" target="_blank" rel="noopener">X</a>
         </nav>
+        <button
+          type="button"
+          class="theme-toggle"
+          id="theme-toggle"
+          aria-label="切换到亮色主题"
+          title="切换到亮色主题"
+        >
+          <span class="tt-glyph" aria-hidden="true">☼</span>
+          <span class="tt-zh">亮色</span>
+          <span class="tt-en">LIGHT</span>
+        </button>
       </div>
     </header>
 

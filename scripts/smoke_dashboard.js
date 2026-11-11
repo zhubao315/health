@@ -185,6 +185,57 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:8021/index.html';
     `the activity links address the right site and day (${activities.hrefs.join(' ')})`
   );
 
+  // --- navigation and theme ---------------------------------------------
+  // The four sites share one navigation and one theme key; the dashboard
+  // has to carry the Chinese labels and the theme switch.
+  const nav = await page.evaluate(() => {
+    const items = [...document.querySelectorAll('.nav a[data-site]')];
+    return {
+      zh: items.map((a) => a.firstElementChild?.textContent?.trim() || ''),
+      en: items.map((a) => a.lastElementChild?.textContent?.trim() || ''),
+      current: document.querySelectorAll('.nav a[aria-current="page"]').length,
+    };
+  });
+  expect(
+    ['健康', '跑步', '骑行', '徒步'].every((zh) => nav.zh.includes(zh)),
+    `the navigation carries the Chinese labels (${nav.zh.join(',')})`
+  );
+  expect(
+    ['HEALTH', 'RUNNING', 'CYCLING', 'HIKING'].every((en) => nav.en.includes(en)),
+    `the navigation carries the English site names (${nav.en.join(',')})`
+  );
+  expect(nav.current === 1, `exactly one navigation item is current (${nav.current})`);
+
+  const themeButton = page.locator('#theme-toggle');
+  expect(await themeButton.count() === 1, 'the theme button is on the page');
+  const chartsBefore = await page.evaluate(
+    () => document.querySelectorAll('canvas').length
+  );
+  await themeButton.click();
+  await page.waitForTimeout(600);
+  const theme = await page.evaluate(() => ({
+    attr: document.documentElement.dataset.theme,
+    stored: localStorage.getItem('zhubao315-theme'),
+    colorScheme: document.documentElement.style.colorScheme,
+    charts: document.querySelectorAll('canvas').length,
+    label: document.getElementById('theme-toggle')?.getAttribute('aria-label') || '',
+  }));
+  console.log('theme:', JSON.stringify(theme));
+  expect(theme.attr === 'light', `the theme button switches the theme (${theme.attr})`);
+  expect(theme.stored === 'light', `the theme is stored (${theme.stored})`);
+  expect(theme.colorScheme === 'light', 'color-scheme follows the theme');
+  expect(
+    theme.charts === chartsBefore,
+    `no chart was lost in the theme switch (${chartsBefore} -> ${theme.charts})`
+  );
+  expect(theme.label.includes('暗色'), 'the button says what it will do next');
+  await themeButton.click();
+  await page.waitForTimeout(400);
+  const backToDark = await page.evaluate(
+    () => document.documentElement.dataset.theme
+  );
+  expect(backToDark === 'dark', `the theme switches back (${backToDark})`);
+
   // --- legacy engine compatibility pass ----------------------------------
   // Older mobile WebViews and headless renderers ship without
   // Array.prototype.at (ES2022) and Canvas2D roundRect. Removing both before

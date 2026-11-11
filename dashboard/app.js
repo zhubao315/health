@@ -41,36 +41,49 @@ const showStaleBuildNotice = () => {
 
 // ------------------------------------------------------------------ helpers
 
-// Semantic palette (Tailwind 400/500 range). Every chart picks its colour from
-// here so a metric keeps the same hue everywhere: sleep is indigo, HRV emerald,
-// resting heart rate rose, stress amber, steps/load cyan.
+// Semantic palette. Every chart picks its colour from here so a metric keeps
+// the same hue everywhere: sleep is indigo, HRV emerald, resting heart rate
+// rose, stress amber, steps/load cyan.
+//
+// The values are read from the page's CSS variables, so the canvas follows the
+// theme: the same hue, darkened where the bright one would not read on white.
+// A chart drawn before the theme was known still gets a colour — the fallback
+// is the dark theme's.
+const themeVar = (name, fallback) => {
+  if (typeof document === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return value || fallback;
+};
+
 const C = {
-  cyan: '#38bdf8',
-  sky: '#38bdf8',
-  indigo: '#6366f1',
-  purple: '#a855f7',
-  rose: '#f43f5e',
-  emerald: '#10b981',
-  amber: '#f59e0b',
-  periwinkle: '#818cf8',
-  slate: '#64748b',
-  text: '#e6eaf0',
-  muted: '#8b95a5',
-  grid: 'rgba(255, 255, 255, 0.05)',
+  get cyan() { return themeVar('--chart-load', '#38bdf8'); },
+  get sky() { return themeVar('--chart-load', '#38bdf8'); },
+  get indigo() { return themeVar('--chart-sleep', '#6366f1'); },
+  get purple() { return themeVar('--chart-purple', '#a855f7'); },
+  get rose() { return themeVar('--chart-rhr', '#f43f5e'); },
+  get emerald() { return themeVar('--chart-hrv', '#10b981'); },
+  get amber() { return themeVar('--chart-stress', '#f59e0b'); },
+  get periwinkle() { return themeVar('--chart-periwinkle', '#818cf8'); },
+  get slate() { return themeVar('--chart-slate', '#64748b'); },
+  get text() { return themeVar('--chart-text', '#e6eaf0'); },
+  get muted() { return themeVar('--chart-muted', '#8b95a5'); },
+  get grid() { return themeVar('--chart-grid', 'rgba(255, 255, 255, 0.05)'); },
   // aggregation lines stay neutral; series are separated by dash pattern too
-  line: '#c7d2fe',
-  lineDim: '#7c8795',
+  get line() { return themeVar('--chart-line', '#c7d2fe'); },
+  get lineDim() { return themeVar('--chart-line-dim', '#7c8795'); },
   // legacy aliases still referenced by a few call sites
-  accent: '#38bdf8',
-  accent2: '#38bdf8',
-  red: '#f43f5e',
-  ok: '#10b981',
-  warn: '#f59e0b',
-  green: '#10b981',
+  get accent() { return themeVar('--chart-load', '#38bdf8'); },
+  get accent2() { return themeVar('--chart-load', '#38bdf8'); },
+  get red() { return themeVar('--chart-rhr', '#f43f5e'); },
+  get ok() { return themeVar('--chart-hrv', '#10b981'); },
+  get warn() { return themeVar('--chart-stress', '#f59e0b'); },
+  get green() { return themeVar('--chart-hrv', '#10b981'); },
 };
 
 const MONO = "'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace";
-const AXIS_COLOR = '#64748b';
+const axisColor = () => themeVar('--chart-axis', '#64748b');
 
 // hex -> rgba, so gradients can reuse the palette without extra literals
 const hexA = (hex, alpha) => {
@@ -147,6 +160,109 @@ const chartDefaults = () => {
 };
 
 const charts = {};
+
+// ---------------------------------------------------------------- theme
+// The four sites share one localStorage key on the same origin, so the theme
+// picked on one of them is the theme on the next one. Dark is the default —
+// it is the dashboard's own look. The page sets `data-theme` in <head> before
+// the stylesheet is applied, so there is no flash; this part only keeps the
+// document, the charts and the button in step.
+
+const THEME_STORAGE_KEY = 'zhubao315-theme';
+
+const readStoredTheme = () => {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    return saved === 'light' || saved === 'dark' ? saved : 'dark';
+  } catch (error) {
+    return 'dark';
+  }
+};
+
+const storeTheme = (theme) => {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (error) {
+    // Storage can be blocked: the theme still changes for this page view.
+  }
+};
+
+const updateThemeToggle = (theme) => {
+  const button = document.getElementById('theme-toggle');
+  if (!button) return;
+  const toLight = theme === 'dark';
+  const action = toLight ? '切换到亮色主题' : '切换到暗色主题';
+  button.setAttribute('aria-label', action);
+  button.setAttribute('title', action);
+  button.setAttribute('aria-pressed', String(toLight));
+  button.dataset.themeState = theme;
+  const glyph = button.querySelector('.tt-glyph');
+  const zh = button.querySelector('.tt-zh');
+  const en = button.querySelector('.tt-en');
+  if (glyph) glyph.textContent = toLight ? '☼' : '☾';
+  if (zh) zh.textContent = toLight ? '亮色' : '暗色';
+  if (en) en.textContent = toLight ? 'LIGHT' : 'DARK';
+};
+
+// The canvas is not CSS: its colours have to be told to the charts. The
+// metric hues stay the same, only the text, grid and axis colours follow the
+// theme — and a theme switch never touches the data.
+const applyChartTheme = () => {
+  if (typeof Chart === 'undefined') return;
+  Chart.defaults.color = C.muted;
+  if (Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
+    Chart.defaults.plugins.legend.labels.color = C.muted;
+  }
+  Object.values(charts).forEach((chart) => {
+    if (!chart) return;
+    chart.options.color = C.muted;
+    if (chart.options.plugins && chart.options.plugins.legend) {
+      chart.options.plugins.legend.labels = {
+        ...(chart.options.plugins.legend.labels || {}),
+        color: C.muted,
+      };
+    }
+    if (chart.options.scales) {
+      for (const scale of Object.values(chart.options.scales)) {
+        if (!scale) continue;
+        scale.ticks = { ...(scale.ticks || {}), color: C.muted };
+        scale.grid = { ...(scale.grid || {}), color: C.grid };
+        if (scale.title) scale.title = { ...scale.title, color: C.muted };
+      }
+    }
+    chart.update('none');
+  });
+};
+
+const setTheme = (theme) => {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  storeTheme(theme);
+  updateThemeToggle(theme);
+  applyChartTheme();
+};
+
+const initTheme = () => {
+  const theme = readStoredTheme();
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  updateThemeToggle(theme);
+  const button = document.getElementById('theme-toggle');
+  if (!button) return;
+  button.addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme === 'light'
+      ? 'light'
+      : 'dark';
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  });
+  // Another tab of the same origin changed the theme: follow it.
+  window.addEventListener('storage', (event) => {
+    if (event.key !== THEME_STORAGE_KEY) return;
+    if (event.newValue === 'light' || event.newValue === 'dark') {
+      setTheme(event.newValue);
+    }
+  });
+};
 
 // ------------------------------------------- synced crosshair + glass tooltip
 // One DOM tooltip card serves every chart (Chart.js native canvas tooltips are
@@ -888,7 +1004,7 @@ const corridorDatasets = (rows, key) => {
 // Minimal axes: no axis lines, no tick marks, no vertical grid; only very faint
 // dashed horizontal rules.
 const axisTicks = (maxTicks) => ({
-  color: AXIS_COLOR,
+  color: axisColor(),
   font: { family: MONO, size: 11 },
   padding: 8,
   maxTicksLimit: maxTicks,
@@ -2958,6 +3074,7 @@ const init = async () => {
     showStaleBuildNotice();
     return;
   }
+  initTheme();
   chartDefaults();
   try {
     const [dataResp, qualityResp] = await Promise.all([
