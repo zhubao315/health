@@ -205,9 +205,42 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:8021/index.html';
     `the navigation carries the English site names (${nav.en.join(',')})`
   );
   expect(nav.current === 1, `exactly one navigation item is current (${nav.current})`);
+  // The health navigation links to the three sport sites only: no X link.
+  const navLinks = await page.evaluate(() =>
+    [...document.querySelectorAll('.nav a')].map((a) => ({
+      text: a.innerText.trim(),
+      href: a.getAttribute('href') || '',
+    }))
+  );
+  expect(
+    !navLinks.some((link) => link.text === 'X' || link.href.includes('x.com')),
+    `the health navigation has no X link (${navLinks
+      .map((link) => link.text.replace(/\s+/g, ' '))
+      .join(' / ')})`
+  );
 
   const themeButton = page.locator('#theme-toggle');
   expect(await themeButton.count() === 1, 'the theme button is on the page');
+  // The button is an icon button: no words in the interface, but the words
+  // for a screen reader and a tooltip.
+  const button = await themeButton.evaluate((element) => ({
+    text: element.innerText.trim(),
+    label: element.getAttribute('aria-label'),
+    title: element.getAttribute('title'),
+    type: element.getAttribute('type'),
+    width: Math.round(element.getBoundingClientRect().width),
+    height: Math.round(element.getBoundingClientRect().height),
+    icons: element.querySelectorAll('svg').length,
+  }));
+  console.log('theme button:', JSON.stringify(button));
+  expect(button.text === '', `the theme button shows no words (${button.text})`);
+  expect(button.icons === 2, `the theme button draws a sun and a moon (${button.icons})`);
+  expect(button.type === 'button', 'the theme button is type="button"');
+  expect(!!button.label && !!button.title, 'the theme button has a label and a title');
+  expect(
+    button.width >= 40 && button.height >= 40,
+    `the theme button is at least 40px (${button.width}x${button.height})`
+  );
   const chartsBefore = await page.evaluate(
     () => document.querySelectorAll('canvas').length
   );

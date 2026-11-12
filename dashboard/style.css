@@ -456,63 +456,64 @@ a {
   border-bottom-color: var(--accent);
 }
 
-.nav .nav-x {
-  margin-left: 0.35rem;
-  padding: 0.42rem 0.5rem;
-  letter-spacing: 0.1em;
-}
-
-.nav .nav-x:hover {
-  border-bottom-color: transparent;
-}
-
-/* the light/dark switch, same shape on all four sites */
+/* The light/dark switch, same shape on all four sites: an icon button.
+   The icon says what the button will do (sun = switch to light, moon =
+   switch to dark); the words live in the aria-label and the tooltip, so
+   the button stays readable for a screen reader without taking space in
+   the header. */
 .theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 44px;
-  padding: 0.3rem 0.55rem;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: var(--muted);
-  font-family: var(--font-sans);
   cursor: pointer;
   transition:
     color 0.16s ease,
     border-color 0.16s ease,
-    background 0.16s ease;
+    background 0.16s ease,
+    transform 0.16s ease;
 }
 
 .theme-toggle:hover {
-  color: var(--text);
-  border-color: var(--border-strong);
+  color: var(--accent);
+  border-color: var(--accent);
   background: var(--overlay-2);
+}
+
+.theme-toggle:active {
+  transform: scale(0.94);
 }
 
 .theme-toggle:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
-.theme-toggle .tt-glyph {
-  font-size: 0.85rem;
-  line-height: 1;
+.theme-icon {
+  inline-size: 18px;
+  block-size: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.theme-toggle .tt-zh {
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1;
+.theme-icon-moon {
+  display: none;
 }
 
-.theme-toggle .tt-en {
-  font-family: var(--font-mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  line-height: 1;
-  opacity: 0.7;
+:root[data-theme='light'] .theme-icon-sun {
+  display: none;
+}
+
+:root[data-theme='light'] .theme-icon-moon {
+  display: block;
 }
 
 /* header metadata pills */

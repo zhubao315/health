@@ -60,7 +60,6 @@
           <a data-site="hiking" href="https://zhubao315.github.io/hiking/">
             <span class="nav-zh">徒步</span><span class="nav-en">HIKING</span>
           </a>
-          <a class="nav-x" href="https://x.com/zhubao315" target="_blank" rel="noopener">X</a>
         </nav>
         <button
           type="button"
@@ -69,9 +68,20 @@
           aria-label="切换到亮色主题"
           title="切换到亮色主题"
         >
-          <span class="tt-glyph" aria-hidden="true">☼</span>
-          <span class="tt-zh">亮色</span>
-          <span class="tt-en">LIGHT</span>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.7 6.7 0 0 0 21 12.8Z"></path>
+          </svg>
         </button>
       </div>
     </header>
@@ -361,8 +371,10 @@
           </div>
           <div class="table-wrap"><table class="coverage" id="corr-stats"></table></div>
           <p class="note">
-            样本为可用配对日；任一侧缺失即剔除该配对。r/CI/n 为浏览器端对当前数据的即时计算，
-            末列 * 为 data.json 中同一关系的后端结果（用于口径一致性核对；两者相差 >0.03 即应怀疑环境或数据落后）。
+            样本为可用配对日；任一侧缺失即剔除该配对。散点图与分位数对比跟随上方
+            <strong>当前时间范围</strong>（含自定义起止日期）与当前滞后天数；下方统计表是
+            <strong>全量历史、固定滞后 1 天</strong> 的基线，不随窗口变化，用于与 data.json
+            中同一关系的后端结果核对（末列 *，两者相差 &gt;0.03 即应怀疑环境或数据落后）。
             多重探索意味着个别高相关可能是巧合，建议只把它当发现链路、再回看原始数据验证。
           </p>
         </article>

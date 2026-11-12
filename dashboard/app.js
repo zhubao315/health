@@ -190,18 +190,15 @@ const storeTheme = (theme) => {
 const updateThemeToggle = (theme) => {
   const button = document.getElementById('theme-toggle');
   if (!button) return;
+  // The button shows an icon only: the sun while the page is dark (it
+  // switches to light), the moon while it is light. The words live in the
+  // aria-label and the tooltip, so they never take space in the header.
   const toLight = theme === 'dark';
   const action = toLight ? '切换到亮色主题' : '切换到暗色主题';
   button.setAttribute('aria-label', action);
   button.setAttribute('title', action);
   button.setAttribute('aria-pressed', String(toLight));
   button.dataset.themeState = theme;
-  const glyph = button.querySelector('.tt-glyph');
-  const zh = button.querySelector('.tt-zh');
-  const en = button.querySelector('.tt-en');
-  if (glyph) glyph.textContent = toLight ? '☼' : '☾';
-  if (zh) zh.textContent = toLight ? '亮色' : '暗色';
-  if (en) en.textContent = toLight ? 'LIGHT' : 'DARK';
 };
 
 // The canvas is not CSS: its colours have to be told to the charts. The
@@ -624,6 +621,22 @@ const addDays = (iso, delta) => {
 // and a single "… is not a function" used to abort the whole dashboard.
 // Indexing explicitly keeps the panel alive on every engine we support.
 const lastOf = (arr) => (Array.isArray(arr) && arr.length ? arr[arr.length - 1] : undefined);
+
+// MediaQueryList.addEventListener is missing in older Safari (and in some
+// embedded browsers); addListener is the fallback there. Without this the
+// listener throws on the very old engines the dashboard has to survive.
+const onMediaChange = (media, handler) => {
+  if (!media) return () => {};
+  if (typeof media.addEventListener === 'function') {
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener('change', handler);
+  }
+  if (typeof media.addListener === 'function') {
+    media.addListener(handler);
+    return () => media.removeListener(handler);
+  }
+  return () => {};
+};
 
 // Minimal HTML escaping for free-text that arrives from the device feed
 // (sport names, captions). Numeric helpers do not need it.
@@ -3124,6 +3137,7 @@ const init = async () => {
     renderCorrChart();
     // the bucket header states the lag it was computed with — keep it in sync
     renderCorrBuckets();
+    renderCorrStats();
   });
 
   document.getElementById('heat-metric').addEventListener('change', (e) => {
@@ -3285,10 +3299,13 @@ const init = async () => {
     updateScrollHint();
   }
 
-  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
-    for (const ch of Object.values(charts)) ch.destroy();
-    renderCharts();
-  });
+  onMediaChange(
+    window.matchMedia('(prefers-reduced-motion: reduce)'),
+    () => {
+      for (const ch of Object.values(charts)) ch.destroy();
+      renderCharts();
+    }
+  );
 };
 
 init().catch((error) => {
