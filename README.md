@@ -18,7 +18,7 @@
 
 <div align="center">
 
-**ZB ACTIVE** — 朱宝 · 运动与健康数字档案
+**ACTIVE** — 朱宝 · 运动与健康数字档案
 **用数据记录每一次前进。**
 
 [❤️ 健康 HEALTH](https://zhubao315.github.io/health/) · [🏃 跑步 RUNNING](https://zhubao315.github.io/running/) · [🚴 骑行 CYCLING](https://zhubao315.github.io/cycling/) · [🥾 徒步 HIKING](https://zhubao315.github.io/hiking/)
@@ -252,9 +252,9 @@ python -m http.server 8000 --directory dashboard
 # 可选：无头浏览器冒烟测试（需要本机 Node 与 playwright-core，见 scripts/smoke_dashboard.js 头部说明）
 ```
 
-## 品牌 ZB ACTIVE
+## 品牌 ACTIVE
 
-四个站点属于同一套品牌视觉系统：同一个 ZB ACTIVE 标志、四套子品牌图标、同一套配色令牌、同一套字体与布局骨架、同一套响应式规则与主题偏好键。运动站各自保留专业表达（跑步的速度与节奏、骑行的机械与流线、徒步的地形与海拔），健康站保持独立的数据驾驶舱实现，不迁框架。
+四个站点属于同一套品牌视觉系统：同一个 ACTIVE 标志、四套子品牌图标、同一套配色令牌、同一套字体与布局骨架、同一套响应式规则与主题偏好键。运动站各自保留专业表达（跑步的速度与节奏、骑行的机械与流线、徒步的地形与海拔），健康站保持独立的数据驾驶舱实现，不迁框架。
 
 - 品牌规范：[BRAND_SYSTEM.md](BRAND_SYSTEM.md)
 - 设计令牌：[src/styles/brand-tokens.css](src/styles/brand-tokens.css)

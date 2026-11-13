@@ -1,8 +1,15 @@
 /* ============================================================================
-   ZB ACTIVE — shared brand tokens
+   ACTIVE — shared brand tokens
    ----------------------------------------------------------------------------
-   Canonical copy: brand/brand-tokens.css (repo: the four activity repos)
-   The same variables are mirrored in health/dashboard/brand-tokens.css.
+   Canonical copy. Mirrored byte-for-byte into:
+     running/cycling/hiking: src/styles/brand-tokens.css
+     health:                 dashboard/brand-tokens.css
+
+   The palette is not invented here: every surface/text/line colour is read
+   from the live main site (zhubao315.github.io, BaseLayout CSS), and the
+   site accents are the main site's own direction colours:
+     --build  #38bdf8 → health      --think  #fbbf24 → cycling
+     --measure #34d399 → hiking     running keeps #d9f36a (owner decision).
 
    Rules that must survive any local change:
 
@@ -16,95 +23,111 @@
 
 :root {
   /* --- mother brand ------------------------------------------------------ */
-  --zb-brand: 'ZB ACTIVE';
-  --zb-brand-zh: '朱宝 · 运动与健康数字档案';
-  --zb-brand-en: 'PERSONAL HEALTH & ACTIVE LIFE';
-  --zb-brand-line: '用数据记录每一次前进。';
+  --active-brand: 'ACTIVE';
+  --active-brand-zh: '朱宝 · 运动与健康数字档案';
+  --active-brand-en: 'PERSONAL HEALTH & ACTIVE LIFE';
+  --active-owner: 'zhubao315';
 
-  /* --- surfaces ---------------------------------------------------------- */
-  --zb-navy: #0b1d33;
-  --zb-navy-deep: #07111e;
-  --zb-surface: #102a43;
-  --zb-surface-hover: #14344f;
-  --zb-surface-soft: #0a1729;
-  --zb-border: #1e3a56;
-  --zb-border-strong: #2a4e70;
+  /* --- surfaces (dark is the house style: the main site's canvas) ------- */
+  --active-canvas: #07111f; /* 主站 --canvas */
+  --active-navy: #0b1d33; /* 主站 --navy */
+  --active-navy-3: #13263d; /* 主站 --navy-3 */
+  --active-bg: var(--active-canvas);
+  --active-surface: #102a43;
+  --active-surface-raised: #13263d;
+  --active-surface-hover: #16324e;
+  --active-border: rgba(247, 250, 255, 0.16); /* 主站 --line-dark 家族 */
+  --active-border-strong: rgba(247, 250, 255, 0.32); /* 主站 --line-dark-strong */
 
   /* --- text -------------------------------------------------------------- */
-  --zb-text: #f8fafc;
-  --zb-text-secondary: #cbd5e1;
-  --zb-text-muted: #94a3b8;
-  --zb-text-dim: #64748b;
+  --active-text: #f7faff; /* 主站 --paper */
+  --active-text-secondary: #cbd5e1;
+  --active-text-muted: #94a3b8; /* 主站 --muted-light */
+  --active-text-dim: #64748b;
 
-  /* --- light surfaces ---------------------------------------------------- */
-  --zb-light-bg: #f4f7fb;
-  --zb-light-surface: #ffffff;
-  --zb-light-text: #0e1b29;
-  --zb-light-text-secondary: #38495b;
-  --zb-light-text-muted: #5b6d80;
-  --zb-light-border: #d3dfec;
+  /* --- light surfaces (the main site's paper) ---------------------------- */
+  --active-light-bg: #f7faff; /* 主站 --paper */
+  --active-light-surface: #ffffff;
+  --active-light-surface-2: #eef2f7; /* 主站 --paper-2 */
+  --active-light-surface-3: #d9e1ec; /* 主站 --paper-3 */
+  --active-light-text: #101828; /* 主站 --ink */
+  --active-light-text-secondary: #38495b;
+  --active-light-text-muted: #667085; /* 主站 --muted */
+  --active-light-border: rgba(16, 24, 40, 0.14); /* 主站 --line 家族 */
+  --active-light-border-strong: rgba(16, 24, 40, 0.3); /* 主站 --line-strong */
 
-  /* --- sub-brand accents -------------------------------------------------
-     A site uses its own pair and nothing else. The pair is bright on the
-     dark surface and deepened on the light surface (see theme.css). */
-  --zb-accent-health: #38bdf8;
-  --zb-accent-health-2: #0ea5e9;
-  --zb-accent-running: #d9f36a;
-  --zb-accent-running-2: #a3b82f;
-  --zb-accent-cycling: #fbbf24;
-  --zb-accent-cycling-2: #f59e0b;
-  --zb-accent-hiking: #34d399;
-  --zb-accent-hiking-2: #10b981;
+  /* --- site accents ------------------------------------------------------
+     A site uses its own pair and nothing else. health/cycling/hiking are
+     the main site's direction colours; running keeps its lime by owner
+     decision — the one deliberate exception to the main-site palette. */
+  --active-accent-health: #38bdf8; /* 主站 --build */
+  --active-accent-health-2: #0ea5e9;
+  --active-accent-running: #d9f36a; /* owner exception, see BRAND_SYSTEM.md */
+  --active-accent-running-2: #a3b82f;
+  --active-accent-cycling: #fbbf24; /* 主站 --think */
+  --active-accent-cycling-2: #f59e0b;
+  --active-accent-hiking: #34d399; /* 主站 --measure */
+  --active-accent-hiking-2: #10b981;
+
+  /* --- status / utility colours ------------------------------------------ */
+  --active-success: #34d399;
+  --active-warning: #f59e0b;
+  --active-danger: #f43f5e;
+  --active-link: #2563eb; /* 主站 --electric */
+  --active-link-ink: #1d4ed8; /* 主站 --electric-ink */
+  --active-link-hi: #60a5fa; /* 主站 --electric-hi */
 
   /* --- health metric semantics -------------------------------------------
      Metric colours never change with the site accent: sleep stays indigo,
      HRV stays emerald, resting heart rate stays rose. */
-  --zb-metric-sleep: #6366f1;
-  --zb-metric-hrv: #10b981;
-  --zb-metric-rhr: #f43f5e;
-  --zb-metric-stress: #f59e0b;
-  --zb-metric-load: #38bdf8;
+  --active-metric-sleep: #6366f1;
+  --active-metric-hrv: #10b981;
+  --active-metric-rhr: #f43f5e;
+  --active-metric-stress: #f59e0b;
+  --active-metric-load: #38bdf8;
 
   /* --- geometry ---------------------------------------------------------- */
-  --zb-radius-card: 12px;
-  --zb-radius-control: 8px;
-  --zb-radius-pill: 999px;
-  --zb-space: 4px;
-  --zb-max-width: 1440px;
-  --zb-content-width: 80rem;
-  --zb-gutter: clamp(1rem, 3vw, 2rem);
+  --active-radius: 12px;
+  --active-radius-sm: 8px;
+  --active-radius-xs: 6px;
+  --active-radius-pill: 999px;
+  --active-space: 4px;
+  --active-shell: 1440px; /* the one content width all four sites share */
+  --active-gutter: clamp(1rem, 3vw, 2rem);
+  --active-header-h: 64px;
+  --active-header-h-sm: 56px;
 
-  /* --- type -------------------------------------------------------------- */
-  --zb-font-sans: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  --zb-font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* --- type --------------------------------------------------------------
+     Text faces are the main site's (Inter for reading, Manrope for display),
+     self-hosted under each site's /fonts/. CJK falls back to the system
+     stack. Numerals, times, distances and paces stay in Fira Code. */
+  --active-font-sans: 'Inter Variable', 'Manrope Variable', 'Noto Sans CJK SC',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --active-font-display: 'Manrope Variable', 'Inter Variable', 'Noto Sans CJK SC',
+    'PingFang SC', sans-serif;
+  --active-font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --zb-title-size: clamp(2rem, 3.6vw, 2.75rem);
-  --zb-section-size: clamp(1.25rem, 2vw, 1.5rem);
-  --zb-body-size: 0.9375rem;
-  --zb-label-size: 0.6875rem;
-
-  /* --- motion ------------------------------------------------------------ */
-  --zb-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --zb-fast: 160ms;
-  --zb-medium: 260ms;
+  --active-ease: cubic-bezier(0.22, 0.72, 0.2, 1); /* 主站 --ease */
+  --active-ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* 主站 --ease-out */
+  --active-fast: 160ms;
+  --active-medium: 260ms;
 
   /* --- mobile navigation -------------------------------------------------- */
-  --zb-mobile-nav-height: 60px;
-  --zb-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --active-mobile-nav-height: 60px;
+  --active-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* The mobile bottom bar exists only on small screens; the desktop header
    keeps the full navigation. */
 @media (min-width: 769px) {
   :root {
-    --zb-mobile-nav-height: 0px;
+    --active-mobile-nav-height: 0px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --zb-fast: 0ms;
-    --zb-medium: 0ms;
+    --active-fast: 0ms;
+    --active-medium: 0ms;
   }
 }

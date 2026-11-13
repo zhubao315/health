@@ -3,22 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b1d33" />
+    <meta name="theme-color" content="#07111f" />
     <meta
       name="description"
-      content="zhubao315 的健康数据：睡眠、HRV、静息心率、压力、训练负荷，COROS MCP 每天自动同步。"
+      content="zhubao315 的健康数据：睡眠、HRV、静息心率、压力、步数与训练负荷，全部对比个人 7 天均值与 28 天基线；COROS MCP 每天自动同步，缺失不等于零，相关不等于因果。"
     />
-    <title>zhubao315 的健康驾驶舱 · ZB ACTIVE</title>
+    <title>ACTIVE / 健康｜zhubao315 的健康数据</title>
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="ZB ACTIVE" />
-    <meta property="og:title" content="zhubao315 的健康驾驶舱 · ZB ACTIVE" />
+    <meta property="og:site_name" content="ACTIVE" />
+    <meta property="og:title" content="ACTIVE / 健康｜zhubao315 的健康数据" />
     <meta property="og:description" content="睡眠、HRV、静息心率、压力与训练负荷，全部对比个人 7 天均值与 28 天基线，不做跨人群评判。" />
     <meta property="og:url" content="https://zhubao315.github.io/health/" />
     <meta property="og:image" content="https://zhubao315.github.io/health/brand/og-health.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ACTIVE / 健康｜zhubao315 的健康数据" />
+    <meta name="twitter:description" content="睡眠、HRV、静息心率、压力与训练负荷，全部对比个人 7 天均值与 28 天基线，不做跨人群评判。" />
+    <link rel="canonical" href="https://zhubao315.github.io/health/" />
+    <link rel="manifest" href="./site.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./brand/favicon.svg" />
-    <link rel="icon" type="image/png" href="./favicon.png" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./brand/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./brand/favicon-64.png" />
+    <link rel="apple-touch-icon" href="./brand/apple-touch-icon.png" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "ACTIVE / HEALTH",
+      "alternateName": "zhubao315 的健康数据",
+      "url": "https://zhubao315.github.io/health/",
+      "inLanguage": "zh-CN"
+    }
+    </script>
     <link rel="stylesheet" href="./style.css?v=__BUILD_HASH__" />
     <link rel="stylesheet" href="./brand-tokens.css?v=__BUILD_HASH__" />
     <script>
@@ -51,12 +68,12 @@
     <header class="site-header">
       <div class="header-inner">
         <a class="brand" href="./">
-          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" role="img" aria-label="ZB ACTIVE">
+          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" role="img" aria-label="ACTIVE">
             <path d="M7 9h18L7 23h18" stroke="currentColor" stroke-width="2.8"
               stroke-linecap="round" stroke-linejoin="round" />
             <circle cx="16" cy="16" r="2.4" fill="#FBBF24" />
           </svg>
-          <span class="brand-wordmark">ZB ACTIVE</span>
+          <span class="brand-wordmark">ACTIVE</span>
           <span class="brand-rule" aria-hidden="true"></span>
           <span class="brand-site">
             <span class="brand-site-zh">健康</span>
@@ -65,13 +82,6 @@
         </a>
         <div class="header-meta" id="header-meta" aria-label="个人档案摘要"></div>
         <nav class="nav" aria-label="运动与健康站点导航">
-          <a data-site="health" href="https://zhubao315.github.io/health/" aria-current="page">
-            <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M2.5 12.5h4.2l2.1-6.4 3.5 12.2 2.6-7 1.9 3.2h4.7"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <span class="nav-text"><span class="nav-zh">健康</span><span class="nav-en">HEALTH</span></span>
-          </a>
           <a data-site="running" href="https://zhubao315.github.io/running/">
             <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M2.5 18.8c3.7 0 4-9.3 8.8-9.3 3.1 0 4.2 4 7.2 4"
@@ -80,6 +90,7 @@
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="nav-text"><span class="nav-zh">跑步</span><span class="nav-en">RUNNING</span></span>
+          
           </a>
           <a data-site="cycling" href="https://zhubao315.github.io/cycling/">
             <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -89,6 +100,7 @@
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="nav-text"><span class="nav-zh">骑行</span><span class="nav-en">CYCLING</span></span>
+          
           </a>
           <a data-site="hiking" href="https://zhubao315.github.io/hiking/">
             <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -99,6 +111,20 @@
                 stroke-linecap="round" opacity="0.55" />
             </svg>
             <span class="nav-text"><span class="nav-zh">徒步</span><span class="nav-en">HIKING</span></span>
+          
+          </a>
+          <a data-site="health" href="https://zhubao315.github.io/health/" aria-current="page">
+            <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M2.5 12.5h4.2l2.1-6.4 3.5 12.2 2.6-7 1.9 3.2h4.7"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="nav-text"><span class="nav-zh">健康</span><span class="nav-en">HEALTH</span></span>
+          
+          </a>
+          <a data-site="github" href="https://github.com/zhubao315/health"
+            target="_blank" rel="noreferrer" aria-label="本站源码 GitHub">
+            <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 19c-4.5 1.5-4.5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>GitHub</span>
           </a>
         </nav>
         <button
@@ -167,7 +193,7 @@
               <path d="M2.5 12.5h4.2l2.1-6.4 3.5 12.2 2.6-7 1.9 3.2h4.7"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <span>ZB ACTIVE</span>
+            <span>ACTIVE</span>
             <span class="hero-brand-slash" aria-hidden="true">/</span>
             <span>HEALTH</span>
           </p>
@@ -511,12 +537,12 @@
     <footer class="footer">
       <div class="footer-inner">
         <span class="footer-brand">
-          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" role="img" aria-label="ZB ACTIVE">
+          <svg class="brand-mark" viewBox="0 0 32 32" fill="none" role="img" aria-label="ACTIVE">
             <path d="M7 9h18L7 23h18" stroke="currentColor" stroke-width="2.8"
               stroke-linecap="round" stroke-linejoin="round" />
             <circle cx="16" cy="16" r="2.4" fill="#FBBF24" />
           </svg>
-          <span class="brand-wordmark">ZB ACTIVE</span>
+          <span class="brand-wordmark">ACTIVE</span>
           <span class="footer-brand-line">朱宝 · 运动与健康数字档案</span>
         </span>
         <span>数据来自 COROS · 每天 08:00（北京时间）自动同步 · 坐标：睡眠/HRV 按醒来日，其余按自然日</span>
@@ -528,15 +554,8 @@
     </footer>
 
     <nav class="mobile-nav" aria-label="四站导航">
-        <a data-site="health" href="https://zhubao315.github.io/health/" aria-current="page">
-          <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M2.5 12.5h4.2l2.1-6.4 3.5 12.2 2.6-7 1.9 3.2h4.7"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          <span>健康</span>
-        </a>
         <a data-site="running" href="https://zhubao315.github.io/running/">
-          <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M2.5 18.8c3.7 0 4-9.3 8.8-9.3 3.1 0 4.2 4 7.2 4"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="M15.6 10.9 18.7 13.5l-3.1 2.6"
@@ -545,7 +564,7 @@
           <span>跑步</span>
         </a>
         <a data-site="cycling" href="https://zhubao315.github.io/cycling/">
-          <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="5.6" cy="16.4" r="3.6" stroke="currentColor" stroke-width="2" />
               <circle cx="18.4" cy="16.4" r="3.6" stroke="currentColor" stroke-width="2" />
               <path d="M5.6 16.4 10.4 8.2h3.8l1.9 3.4M10.4 8.2l2.6 8.2h5.4M14.2 8.2h2.6"
@@ -554,7 +573,7 @@
           <span>骑行</span>
         </a>
         <a data-site="hiking" href="https://zhubao315.github.io/hiking/">
-          <svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M2.2 18.6 8.4 8.2l4.1 7 2.4-3.9 4.7 7.3"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="M2.2 18.6h17.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.55" />
@@ -562,6 +581,13 @@
                 stroke-linecap="round" opacity="0.55" />
             </svg>
           <span>徒步</span>
+        </a>
+        <a data-site="health" href="https://zhubao315.github.io/health/" aria-current="page">
+<svg class="site-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M2.5 12.5h4.2l2.1-6.4 3.5 12.2 2.6-7 1.9 3.2h4.7"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          <span>健康</span>
         </a>
     </nav>
     <button type="button" id="back-to-top" class="back-to-top" hidden aria-label="回到顶部">↑</button>

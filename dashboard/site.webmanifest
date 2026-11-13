@@ -1,0 +1,23 @@
+{
+  "name": "ACTIVE / 健康｜zhubao315 的健康数据",
+  "short_name": "ACTIVE",
+  "description": "睡眠、HRV、静息心率、压力与训练负荷的个人趋势与健康驾驶舱。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "lang": "zh-CN",
+  "theme_color": "#38bdf8",
+  "background_color": "#07111f",
+  "icons": [
+    {
+      "src": "./brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
