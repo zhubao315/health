@@ -1,0 +1,34 @@
+name: Brand Guard
+
+# Shared brand assets (tokens, spec, fonts, logo assets, shared components)
+# are copied from the ACTIVE brand source of truth:
+#   https://github.com/zhubao315/active-watch/tree/main/brand
+# Hand-editing them in this repo is how four sites drift apart, so this guard
+# fails on manifest drift or on the retired master brand name coming back.
+# Fix: edit the source of truth, run brand/sync.sh, commit the copy.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shared brand assets match BRAND_MANIFEST.sha256
+        run: |
+          if ! sha256sum --check BRAND_MANIFEST.sha256; then
+            echo "::error::Shared brand asset drift. Do not hand-edit these files here. Edit https://github.com/zhubao315/active-watch/tree/main/brand and run brand/sync.sh, then commit the copied result."
+            exit 1
+          fi
+      - name: Retired master brand name must not appear
+        run: |
+          if grep -rn "ZB ACTIVE" dashboard 2>/dev/null; then
+            echo "::error::The retired master brand name ZB ACTIVE came back; the master brand is ACTIVE."
+            exit 1
+          fi
