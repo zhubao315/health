@@ -2485,7 +2485,11 @@ main section[id] {
 }
 
 @media (max-width: 720px) {
-  .brand > span {
+  /* The words stay on the phone: a phone header shows the mark, the mother
+     brand, the site name and the theme switch. Only the rule and the small
+     English site name give way. */
+  .brand-rule,
+  .brand-site-en {
     display: none;
   }
 
@@ -2605,6 +2609,17 @@ main section[id] {
   width: 2rem;
   height: 2rem;
   color: var(--text);
+}
+
+/* The brand never collapses: on a phone the mark and the two words have to
+   stay readable, whatever else the header is showing. */
+.brand {
+  flex: none;
+}
+
+.brand-wordmark,
+.brand-site {
+  flex: none;
 }
 
 .brand-wordmark {
