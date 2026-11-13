@@ -309,6 +309,66 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:8021/index.html';
   expect(legacyState.bodyCards > 0, 'legacy engine pass still renders the body card');
   await legacy.close();
 
+
+  // --- fault isolation -----------------------------------------------------
+  // The two failure modes that once turned the whole cockpit into one error
+  // card must now degrade: (1) Chart.js never arrives, (2) stale HTML pairs
+  // with fresh JS. Everything that can still render must keep rendering.
+  const fault = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // let the UMD bundle load, then take the global away immediately before
+  // app.js evaluates: that is exactly what a blocked/corrupted chart library
+  // leaves behind — Chart.js died on its own registration, app.js sees none
+  await fault.route('**/app.js*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    route.fulfill({
+      response,
+      body:
+        body +
+        '\n;window.Chart = undefined;' +
+        "Object.defineProperty(window, 'Chart', { value: undefined, writable: false, configurable: false });\n" +
+        'init();',
+    });
+  });
+  const faultPage = await fault.newPage();
+  const faultProblems = [];
+  faultPage.on('pageerror', (e) => faultProblems.push(`pageerror: ${e.message}`));
+  await faultPage.goto(url, { waitUntil: 'networkidle' });
+  await faultPage.waitForTimeout(1500);
+  const faultState = await faultPage.evaluate(() => ({
+    kpis: document.querySelectorAll('.kpi').length,
+    rows: document.querySelectorAll('#daily-table tbody tr').length,
+    status: document.querySelector('#chart-lib-notice')?.textContent || '',
+    retry: document.querySelectorAll('.degraded-retry, #data-status button').length,
+  }));
+  console.log('chart-missing state:', JSON.stringify(faultState));
+  expect(faultProblems.length === 0, `chart-missing pass raised errors: ${faultProblems.join(' | ')}`);
+  expect(faultState.kpis >= 6, `chart-missing pass must keep the KPIs (got ${faultState.kpis})`);
+  expect(faultState.rows > 0, `chart-missing pass must keep the daily table (got ${faultState.rows} rows)`);
+  expect(faultState.status.includes('图表库'), `chart-missing pass must say the chart library failed (got "${faultState.status}")`);
+  expect(faultState.retry >= 1, 'chart-missing pass must offer a retry');
+  await faultPage.close();
+  await fault.close();
+
+  const stale = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await stale.addInitScript(() => {
+    Object.defineProperty(window, '__ASSET_BUILD__', { value: 'stale-hash', configurable: true });
+  });
+  const stalePage = await stale.newPage();
+  const staleProblems = [];
+  stalePage.on('pageerror', (e) => staleProblems.push(`pageerror: ${e.message}`));
+  await stalePage.goto(url, { waitUntil: 'networkidle' });
+  await stalePage.waitForTimeout(1200);
+  const staleState = await stalePage.evaluate(() => ({
+    banner: [...document.querySelectorAll('[role="alert"]')].map((n) => n.textContent).join(' '),
+  }));
+  console.log('stale-build state:', JSON.stringify(staleState));
+  expect(staleProblems.length === 0, `stale-build pass raised errors: ${staleProblems.join(' | ')}`);
+  expect(staleState.banner.includes('不一致') || staleState.banner.includes('缓存'),
+    `stale-build pass must show the cache-mismatch banner (got "${staleState.banner}")`);
+  await stalePage.close();
+  await stale.close();
+
   await page.screenshot({ path: process.env.SMOKE_SHOT || '/tmp/dashboard_smoke.png' });
 
   if (problems.length) {
