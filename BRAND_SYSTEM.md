@@ -33,21 +33,21 @@ RUNNING · CYCLING · HIKING · HEALTH
 
 ### 2.1 图形
 
-Z 字由**一条连续的轨迹线**构成：起点在高处，落点在低处，横折斜再横——这是一条路线的形状。斜线与横线交汇处有一枚金色节点（`#fbbf24`，即主站 `--think`），代表"此刻所在的位置"。
+**站点标志使用主站的朱宝轨迹徽记 `zhubao-symbol.png`**（业主决定，2026-11-13 第三轮）：四站与主站同一图形、同一文件（四仓内 md5 一致；源文件 592×530 RGBA，站内用等比优化版 ~6KB）。Z 形轨迹语言与主站 Z-GRID 同源。
 
-- 与主站的 Z-GRID 视觉语言同源；不堆叠运动 Emoji。
-- 纯矢量、`currentColor`、无网络依赖、无动画、无低对比渐变；24px 可识别，16px 仍看出是 Z。
-- 描边 2.8px，圆角端点与圆角折角。
+- 主站同款悬停动效：`.brand:hover .brand-mark { transform: rotate(-3deg) scale(1.04); }`，缓动 `--active-ease-out`（主站 `--ease-out`），0.35s；`prefers-reduced-motion` 下全局关闭。
+- 标志为装饰元素（`alt=""`），可访问名称由外层品牌链接的 `aria-label="ACTIVE"` 承担——与主站做法一致。
+- Z 矢量标志（`active-mark.svg` 等）降级为次级图形：仍用于 OG 分享图与图标瓦片；favicon 位图改用轨迹徽记本体（apple-touch-icon 垫 navy 底）。
 
 ### 2.2 版本
 
 | 文件 | 用途 | 说明 |
 |---|---|---|
-| `assets/active-logo.svg` | 完整组合（图形 + ACTIVE 字标 + 副标） | `currentColor`，深浅背景通用 |
+| `assets/zhubao-symbol.png` | **站点头部/页脚标志（现行）** | 主站朱宝轨迹徽记，四站同文件 |
 | `assets/active-mark.svg` | 独立图形 | `currentColor` + 固定金色节点 |
 | `assets/active-logo-light.svg` | 深色背景独立图形 | 纸白描边 `#f7faff` |
 | `assets/active-logo-dark.svg` | 浅色背景独立图形 | 海军蓝描边 `#0b1d33`，节点 `#d9a40a` |
-| `assets/favicon.svg` | 浏览器图标 / 书签 | 32×32 圆角方块（主站 navy）内嵌图形 |
+| `assets/favicon.svg` | 浏览器图标 / 书签 | 内嵌轨迹徽记（与主站 favicon 同思路） |
 | `favicon-32.png` / `favicon-64.png` / `apple-touch-icon.png` | 位图回退 | 每站生成，节点用本站强调色 |
 
 字标使用 Manrope 800（字距 2.2px），副标使用 Fira Code 500（字距 2.1px）。站内 SVG 内联渲染，字体随页面加载。
@@ -160,5 +160,5 @@ Fira Sans 不再作为文本字体；Fira Code 保留为等宽数字字体。
 3. 不在视觉改造中替换真实指标为演示数字。
 4. 不删除地图、GPS 轨迹、3D 地形、日历、筛选与深度链接。
 5. 不在组件里硬编码颜色，只用 token。
-6. 不用个人头像充当站点品牌标识。
+6. 不用 GitHub 头像充当站点品牌标识（现行标志为主站轨迹徽记 `zhubao-symbol.png`，业主决定）。
 7. 不出现「ZB ACTIVE」——母品牌自 2.0 起名为 **ACTIVE**（历史记录与提交信息除外）。

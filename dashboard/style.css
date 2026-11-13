@@ -453,8 +453,7 @@ a {
 
 .nav a:hover {
   color: var(--text);
-  border-bottom-color: var(--border-strong);
-  background: var(--overlay-2);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .nav a[aria-current='page'] {
@@ -2625,9 +2624,32 @@ main section[id] {
 /* ------------------------------------------------------------- header ---- */
 .brand-mark {
   flex: none;
-  width: 2rem;
+  width: auto;
   height: 2rem;
   color: var(--text);
+  /* the main site's hover: the mark tilts and grows a hair, on its easing */
+  transition: transform 0.35s var(--active-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.brand:hover .brand-mark,
+.brand:focus-visible .brand-mark,
+.footer-brand:hover .brand-mark,
+.footer-brand:focus-visible .brand-mark {
+  transform: rotate(-3deg) scale(1.04);
+}
+
+/* GitHub in the top bar reads like the sport sites: mono, muted, small. */
+.nav a.nav-plain {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+/* The profile pills live in the page body, not the header: the four sites
+   share one header structure — brand on the left, nav and theme on the
+   right, nothing in between. */
+.header-meta {
+  display: none;
 }
 
 /* The brand never collapses: on a phone the mark and the two words have to
