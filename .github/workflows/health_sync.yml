@@ -3,13 +3,14 @@ name: Health Sync
 on:
   workflow_dispatch:
   schedule:
-    # 09:07 Asia/Shanghai — one pass a day. Health data is written once a day
-    # by the watch, and the incremental fetch always backfills whatever a
-    # missed or throttled run left behind, so an evening compensation pass only
-    # doubled the Actions cost. The slot is deliberately a few minutes past the
-    # hour because GitHub's scheduler heavily delays :00 slots (observed a
-    # 6-hour drift on this repo).
-    - cron: '7 1 * * *'   # 09:07 Asia/Shanghai
+    # 04:05 Asia/Shanghai — five hours ahead of the old 09:07 slot. That
+    # slot was already a workaround for the scheduler delaying :00 times
+    # ("observed a 6-hour drift"), but the drift is five to seven hours
+    # now, so the pass kept landing after four in the afternoon. Fired
+    # early, this one lands near 10:00 Beijing; the incremental fetch
+    # always backfills whatever a missed or throttled run left behind.
+    # 05 minutes past the hour, and 30 min clear of hiking's weekly pass.
+    - cron: '5 20 * * *'
   push:
     branches:
       - main

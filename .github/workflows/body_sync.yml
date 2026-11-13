@@ -4,7 +4,11 @@ name: Body Sync
 # cadence keeps the board current without hitting the vendor API every day.
 on:
   schedule:
-    - cron: '10 1 * * 1' # Mondays 09:10 Asia/Shanghai
+    # Mondays 04:35 Asia/Shanghai (the UTC weekday is Sunday because the
+    # slot crosses midnight) — five and a half hours ahead of the old 09:10
+    # slot: GitHub fires 6-7 h late here, so this lands Monday ~10:40
+    # Beijing, 30 min clear of the daily health pass.
+    - cron: '35 20 * * 0'
   workflow_dispatch:
 
 permissions:
