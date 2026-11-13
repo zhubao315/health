@@ -37,14 +37,14 @@ def main():
             latest = row[2]
     lines.append(END)
     lines.append("")
-    lines.append(f"> 最新数据：**{latest or '—'}** · 每天早上 08:00（北京时间）自动同步。")
+    lines.append(f"> 最新数据：**{latest or '—'}** · 每日自动同步；实际完成时间随 GitHub 调度漂移，以页面数据徽章为准。")
 
     path = Path("README.md")
     content = path.read_text()
     if START not in content or END not in content:
         raise SystemExit("stats markers missing in README.md")
     content = re.sub(
-        re.escape(START) + r".*?" + re.escape(END) + r"(?:\n\n> 最新数据：.*?自动同步。)?",
+        re.escape(START) + r".*?" + re.escape(END) + r"(?:\n\n> 最新数据：[^\n]*)?",
         "\n".join(lines),
         content,
         flags=re.S,
