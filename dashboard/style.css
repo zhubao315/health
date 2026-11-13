@@ -2589,3 +2589,219 @@ main section[id] {
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================================
+   ZB ACTIVE — brand layer
+   ----------------------------------------------------------------------------
+   The dashboard keeps its own scientific tokens above; this block adds the
+   mother brand: the mark, the sub-brand icons in the navigation, the mobile
+   bottom bar and the generated backdrop. Colours still come from the tokens
+   (--accent, --text, --border …), never from a literal in this file.
+   ========================================================================== */
+
+/* ------------------------------------------------------------- header ---- */
+.brand-mark {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  color: var(--text);
+}
+
+.brand-wordmark {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+
+.brand-rule {
+  width: 1px;
+  height: 1.1rem;
+  background: var(--border-strong);
+}
+
+.brand-site {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.brand-site-zh {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.brand-site-en {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+.site-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.82;
+}
+
+.nav a {
+  flex-direction: row;
+  gap: 0.4rem;
+}
+
+.nav-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.15;
+}
+
+.nav a[aria-current='page'] .site-icon {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- hero ---- */
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -12%;
+  right: 8%;
+  bottom: -12%;
+  left: 8%;
+  background-image: url('./brand/hero-health.webp');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent);
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.35rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hero-brand-slash {
+  opacity: 0.5;
+}
+
+:root[data-theme='light'] .hero::before {
+  display: none;
+}
+
+/* ------------------------------------------------------- mobile bottom ---- */
+.mobile-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  display: none;
+  border-top: 1px solid var(--border);
+  background: var(--bar-bg);
+  backdrop-filter: blur(16px) saturate(1.2);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-nav a {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 0.45rem 0.25rem;
+  color: var(--muted);
+}
+
+.mobile-nav a .site-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.mobile-nav a span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.mobile-nav a[aria-current='page'] {
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: 40rem;
+    margin: 0 auto;
+  }
+
+  .main {
+    padding-bottom: calc(60px + 1.5rem);
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .brand-rule,
+  .brand-site-en {
+    display: none;
+  }
+
+  .brand-wordmark {
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+  }
+
+  .brand-site-zh {
+    font-size: 0.78rem;
+  }
+
+  .hero::before {
+    opacity: 0.16;
+  }
+}
+
+/* ------------------------------------------------------------- footer ---- */
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-brand-line {
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}

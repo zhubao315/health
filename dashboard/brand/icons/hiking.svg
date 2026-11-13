@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="HIKING">
+  <title>HIKING</title>
+  <!-- Two peaks and the contour line they sit on. -->
+  <path d="M2.2 18.6 8.4 8.2l4.1 7 2.4-3.9 4.7 7.3"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M2.2 18.6h17.6"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.55" />
+  <path d="M6.1 13.2c1.9-1.3 3.9-1.3 5.8 0"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.55" />
+</svg>

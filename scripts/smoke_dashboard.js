@@ -191,8 +191,10 @@ const url = process.env.SMOKE_URL || 'http://127.0.0.1:8021/index.html';
   const nav = await page.evaluate(() => {
     const items = [...document.querySelectorAll('.nav a[data-site]')];
     return {
-      zh: items.map((a) => a.firstElementChild?.textContent?.trim() || ''),
-      en: items.map((a) => a.lastElementChild?.textContent?.trim() || ''),
+      // The label spans are read by name: a navigation item carries the
+      // sub-brand icon before them.
+      zh: items.map((a) => a.querySelector('.nav-zh')?.textContent?.trim() || ''),
+      en: items.map((a) => a.querySelector('.nav-en')?.textContent?.trim() || ''),
       current: document.querySelectorAll('.nav a[aria-current="page"]').length,
     };
   });

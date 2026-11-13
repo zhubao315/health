@@ -1,0 +1,110 @@
+/* ============================================================================
+   ZB ACTIVE — shared brand tokens
+   ----------------------------------------------------------------------------
+   Canonical copy: brand/brand-tokens.css (repo: the four activity repos)
+   The same variables are mirrored in health/dashboard/brand-tokens.css.
+
+   Rules that must survive any local change:
+
+   1. A site's accent colour is a brand colour, not a data colour. Health
+      metric colours (sleep, HRV, RHR, stress, load) keep their own meaning
+      and are never replaced by the site accent.
+   2. Every colour is a token. A component never hard-codes a hex value.
+   3. Dark is the default surface of the brand; light is the same design read
+      on paper. Both themes ship from the same token names.
+   ========================================================================== */
+
+:root {
+  /* --- mother brand ------------------------------------------------------ */
+  --zb-brand: 'ZB ACTIVE';
+  --zb-brand-zh: '朱宝 · 运动与健康数字档案';
+  --zb-brand-en: 'PERSONAL HEALTH & ACTIVE LIFE';
+  --zb-brand-line: '用数据记录每一次前进。';
+
+  /* --- surfaces ---------------------------------------------------------- */
+  --zb-navy: #0b1d33;
+  --zb-navy-deep: #07111e;
+  --zb-surface: #102a43;
+  --zb-surface-hover: #14344f;
+  --zb-surface-soft: #0a1729;
+  --zb-border: #1e3a56;
+  --zb-border-strong: #2a4e70;
+
+  /* --- text -------------------------------------------------------------- */
+  --zb-text: #f8fafc;
+  --zb-text-secondary: #cbd5e1;
+  --zb-text-muted: #94a3b8;
+  --zb-text-dim: #64748b;
+
+  /* --- light surfaces ---------------------------------------------------- */
+  --zb-light-bg: #f4f7fb;
+  --zb-light-surface: #ffffff;
+  --zb-light-text: #0e1b29;
+  --zb-light-text-secondary: #38495b;
+  --zb-light-text-muted: #5b6d80;
+  --zb-light-border: #d3dfec;
+
+  /* --- sub-brand accents -------------------------------------------------
+     A site uses its own pair and nothing else. The pair is bright on the
+     dark surface and deepened on the light surface (see theme.css). */
+  --zb-accent-health: #38bdf8;
+  --zb-accent-health-2: #0ea5e9;
+  --zb-accent-running: #d9f36a;
+  --zb-accent-running-2: #a3b82f;
+  --zb-accent-cycling: #fbbf24;
+  --zb-accent-cycling-2: #f59e0b;
+  --zb-accent-hiking: #34d399;
+  --zb-accent-hiking-2: #10b981;
+
+  /* --- health metric semantics -------------------------------------------
+     Metric colours never change with the site accent: sleep stays indigo,
+     HRV stays emerald, resting heart rate stays rose. */
+  --zb-metric-sleep: #6366f1;
+  --zb-metric-hrv: #10b981;
+  --zb-metric-rhr: #f43f5e;
+  --zb-metric-stress: #f59e0b;
+  --zb-metric-load: #38bdf8;
+
+  /* --- geometry ---------------------------------------------------------- */
+  --zb-radius-card: 12px;
+  --zb-radius-control: 8px;
+  --zb-radius-pill: 999px;
+  --zb-space: 4px;
+  --zb-max-width: 1440px;
+  --zb-content-width: 80rem;
+  --zb-gutter: clamp(1rem, 3vw, 2rem);
+
+  /* --- type -------------------------------------------------------------- */
+  --zb-font-sans: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --zb-font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --zb-title-size: clamp(2rem, 3.6vw, 2.75rem);
+  --zb-section-size: clamp(1.25rem, 2vw, 1.5rem);
+  --zb-body-size: 0.9375rem;
+  --zb-label-size: 0.6875rem;
+
+  /* --- motion ------------------------------------------------------------ */
+  --zb-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --zb-fast: 160ms;
+  --zb-medium: 260ms;
+
+  /* --- mobile navigation -------------------------------------------------- */
+  --zb-mobile-nav-height: 60px;
+  --zb-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* The mobile bottom bar exists only on small screens; the desktop header
+   keeps the full navigation. */
+@media (min-width: 769px) {
+  :root {
+    --zb-mobile-nav-height: 0px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --zb-fast: 0ms;
+    --zb-medium: 0ms;
+  }
+}

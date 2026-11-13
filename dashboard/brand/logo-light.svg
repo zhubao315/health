@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="ZB ACTIVE">
+  <title>ZB ACTIVE</title>
+  <path d="M7 9h18L7 23h18" stroke="#F7F3EA" stroke-width="2.8"
+        stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="16" cy="16" r="2.4" fill="#FBBF24" />
+</svg>

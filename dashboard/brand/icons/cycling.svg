@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="CYCLING">
+  <title>CYCLING</title>
+  <!-- Two wheels and the frame between them. -->
+  <circle cx="5.6" cy="16.4" r="3.6" stroke="currentColor" stroke-width="2" />
+  <circle cx="18.4" cy="16.4" r="3.6" stroke="currentColor" stroke-width="2" />
+  <path d="M5.6 16.4 10.4 8.2h3.8l1.9 3.4M10.4 8.2l2.6 8.2h5.4M14.2 8.2h2.6"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
