@@ -113,7 +113,7 @@
   --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --shadow-pop: 0 24px 60px -12px rgba(0, 0, 0, 0.75), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --header-h: 64px; /* unified four-site header: 63px content + 1px border */
+  --header-h: var(--active-header-h, 64px); /* shared ACTIVE header token */
 
   /* overlays: a veil of the surface's own colour, so the light theme can
      darken them instead of lightening */
@@ -345,7 +345,7 @@ a {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
   border-bottom: 1px solid var(--border);
   background: var(--bar-bg);
   backdrop-filter: blur(16px) saturate(1.2);
@@ -563,7 +563,7 @@ a {
 .sticky-bar {
   position: sticky;
   top: var(--header-h);
-  z-index: 18;
+  z-index: 48;
   padding: 0.45rem 0 0;
   border-bottom: 1px solid var(--border);
   background: var(--bar-bg-soft);
@@ -633,7 +633,7 @@ a {
 
 .section-nav {
   display: flex;
-  width: min(1180px, 100% - 2rem);
+  width: min(var(--active-shell, 1440px), 100% - 2 * var(--active-gutter, 1rem));
   margin: 0.4rem auto 0.45rem;
   overflow-x: auto;
   scrollbar-width: none;
@@ -2665,8 +2665,8 @@ main section[id] {
 
 .brand-wordmark {
   font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   white-space: nowrap;
 }
 
@@ -2793,14 +2793,14 @@ main section[id] {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  min-height: 56px;
+  min-height: var(--active-mobile-nav-height, 60px);
   padding: 0.45rem 0.25rem;
   color: var(--muted);
 }
 
 .mobile-nav a .site-icon {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .mobile-nav a span {
@@ -2836,8 +2836,8 @@ main section[id] {
   }
 
   .brand-wordmark {
-    font-size: 0.85rem;
-    letter-spacing: 0.06em;
+    font-size: 0.88rem;
+    letter-spacing: 0.12em;
   }
 
   .brand-site-zh {
@@ -2866,7 +2866,7 @@ main section[id] {
    offsets itself from the same token, so both move together). */
 @media (max-width: 768px) {
   :root {
-    --header-h: 56px;
+    --header-h: var(--active-header-h-sm, 56px);
   }
 }
 
@@ -2887,5 +2887,28 @@ main section[id] {
 
   .nav a {
     padding: 0.35rem 0.5rem;
+  }
+}
+
+/* ---- ACTIVE unified shell: right-hand cluster and footer site nav -------- */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+  .footer-nav {
+    gap: 0.25rem 0.75rem;
   }
 }
