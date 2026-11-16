@@ -38,6 +38,8 @@ RUNNING · CYCLING · HIKING · HEALTH
 - 主站同款悬停动效：`.brand:hover .brand-mark { transform: rotate(-3deg) scale(1.04); }`，缓动 `--active-ease-out`（主站 `--ease-out`），0.35s；`prefers-reduced-motion` 下全局关闭。
 - 标志为装饰元素（`alt=""`），可访问名称由外层品牌链接的 `aria-label="ACTIVE"` 承担——与主站做法一致。
 - Z 矢量标志（`active-mark.svg` 等）降级为次级图形：仍用于 OG 分享图与图标瓦片；favicon 位图改用轨迹徽记本体（apple-touch-icon 垫 navy 底）。
+- 2026-11-16 起，站点标志的位图母版改为**严格切分版**：`zhubao-symbol-original.png`（从品牌板左侧大图按 (130,130)-(445,410) 直接裁切，零重绘/零改色），`zhubao-symbol.png` 只是它的等比优化副本。
+- 完整切图族（Panel A–I：符号、横向/纵向组合、单色、反白、字标、Favicon、深浅底应用示例）以 `zhubao-*.png` 随共享品牌包分发到四站；坐标与 SHA256 见 `zhubao-slices-manifest.json`，来源板见 `zhubao-source-board.png`。
 
 ### 2.2 版本
 

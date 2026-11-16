@@ -1,0 +1,235 @@
+{
+  "source": "ZHUBAO Brand Identity System.png",
+  "source_size": [
+    1536,
+    1024
+  ],
+  "method": "direct pixel crop (no redraw / recolor / vectorization)",
+  "slices": [
+    {
+      "file": "symbol-panel.png",
+      "box": [
+        615,
+        105,
+        770,
+        235
+      ],
+      "size": [
+        155,
+        130
+      ],
+      "sha256_16": "38fb5b72763f280b",
+      "description": "Panel A 图形标志 · Z-Grid symbol (flat)"
+    },
+    {
+      "file": "symbol-hero.png",
+      "box": [
+        130,
+        130,
+        445,
+        410
+      ],
+      "size": [
+        315,
+        280
+      ],
+      "sha256_16": "3150980c59c65d5c",
+      "description": "左侧大图 · 3D hero symbol"
+    },
+    {
+      "file": "horizontal-lockup.png",
+      "box": [
+        935,
+        105,
+        1445,
+        225
+      ],
+      "size": [
+        510,
+        120
+      ],
+      "sha256_16": "e7a0d9da7d3142e3",
+      "description": "Panel B 横向组合 · symbol + ZHUBAO + 朱宝"
+    },
+    {
+      "file": "stacked-lockup.png",
+      "box": [
+        600,
+        300,
+        790,
+        450
+      ],
+      "size": [
+        190,
+        150
+      ],
+      "sha256_16": "72b7ac7d5dee7844",
+      "description": "Panel C 纵向组合 · symbol / ZHUBAO / 朱宝"
+    },
+    {
+      "file": "mono-light.png",
+      "box": [
+        893,
+        310,
+        1015,
+        445
+      ],
+      "size": [
+        122,
+        135
+      ],
+      "sha256_16": "907ecd6349a4cb27",
+      "description": "Panel D 单色 · 黑 Z + 冷白底"
+    },
+    {
+      "file": "mono-dark.png",
+      "box": [
+        1042,
+        310,
+        1163,
+        445
+      ],
+      "size": [
+        121,
+        135
+      ],
+      "sha256_16": "5143b0a7c0ad6019",
+      "description": "Panel D 单色 · 白 Z + 黑底"
+    },
+    {
+      "file": "reverse-lockup.png",
+      "box": [
+        1265,
+        300,
+        1455,
+        450
+      ],
+      "size": [
+        190,
+        150
+      ],
+      "sha256_16": "be32b37c492d9ec4",
+      "description": "Panel E 反白版本 · 深底组合"
+    },
+    {
+      "file": "wordmark-en.png",
+      "box": [
+        1120,
+        112,
+        1445,
+        170
+      ],
+      "size": [
+        325,
+        58
+      ],
+      "sha256_16": "4e1516f1076aee74",
+      "description": "Panel B 英文品牌字标 ZHUBAO"
+    },
+    {
+      "file": "wordmark-zh.png",
+      "box": [
+        1185,
+        172,
+        1370,
+        220
+      ],
+      "size": [
+        185,
+        48
+      ],
+      "sha256_16": "2cbb17c80132f6b5",
+      "description": "Panel B 中文辅助字标 朱宝 + 横线"
+    },
+    {
+      "file": "favicon-16.png",
+      "box": [
+        564,
+        708,
+        602,
+        748
+      ],
+      "size": [
+        38,
+        40
+      ],
+      "sha256_16": "c3cfd31086de4cd5",
+      "description": "Panel F favicon 16×16 展示样块"
+    },
+    {
+      "file": "favicon-32.png",
+      "box": [
+        633,
+        696,
+        689,
+        752
+      ],
+      "size": [
+        56,
+        56
+      ],
+      "sha256_16": "346471d2a63ace7d",
+      "description": "Panel F favicon 32×32 展示样块"
+    },
+    {
+      "file": "favicon-64.png",
+      "box": [
+        723,
+        686,
+        797,
+        758
+      ],
+      "size": [
+        74,
+        72
+      ],
+      "sha256_16": "df3488ebca925f8c",
+      "description": "Panel F favicon 64×64 展示样块"
+    },
+    {
+      "file": "favicon-128.png",
+      "box": [
+        822,
+        678,
+        907,
+        766
+      ],
+      "size": [
+        85,
+        88
+      ],
+      "sha256_16": "80dcfbbe2c17cf70",
+      "description": "Panel F favicon 128×128 展示样块"
+    },
+    {
+      "file": "usage-dark.png",
+      "box": [
+        940,
+        855,
+        1215,
+        980
+      ],
+      "size": [
+        275,
+        125
+      ],
+      "sha256_16": "6b1981811af09898",
+      "description": "Panel I 深色背景应用示例"
+    },
+    {
+      "file": "usage-light.png",
+      "box": [
+        1240,
+        855,
+        1495,
+        980
+      ],
+      "size": [
+        255,
+        125
+      ],
+      "sha256_16": "f457fa35a9d8e79e",
+      "description": "Panel I 冷白背景应用示例"
+    }
+  ]
+}
