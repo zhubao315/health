@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="RUNNING">
+  <title>RUNNING — energy in motion</title>
+  <g fill="#D9F36A">
+    <!-- head -->
+    <circle cx="14.6" cy="4.6" r="2.1"/>
+    <!-- torso + arms + legs, one flowing silhouette -->
+    <path d="M13 7.8c-1.6-.5-3.3-.2-4.6.9L5 11.4l-2.6.9a1.2 1.2 0 0 0 .5 2.3l3.3-.9 3-2.1-1.7 3.6-3.1 3.7a1.2 1.2 0 0 0 1.8 1.6l3.4-3.9 1.4-3.1.6 3.7 3.1 4.3a1.2 1.2 0 0 0 2-1.4l-2.9-4.7-1-4.2 2.4 2.6 3.6 1.3a1.2 1.2 0 0 0 .8-2.3l-4-1.4-3.4-3.6Z"/>
+  </g>
+</svg>

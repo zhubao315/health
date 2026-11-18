@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 92" fill="none" role="img" aria-label="ACTIVE">
+  <title>ACTIVE — white lockup for dark surfaces</title>
+  <g transform="translate(0 16) scale(0.52)" fill="#F7FAFF">
+    <path d="M2 110 L30 110 C40 96 52 74 66 52 L94 8 C88 5 80 5 74 8 L36 64 C24 86 12 104 2 110 Z"/>
+    <path d="M92 8 C104 11 113 22 120 36 L147 70 C141 73 131 71 124 64 L96 26 Z"/>
+    <path d="M58 98 C70 82 82 71 98 69 C120 66 146 70 166 84 C170 92 172 101 174 110 C164 108 156 103 150 96 C138 86 118 82 100 85 C82 88 68 93 62 101 Z"/>
+  </g>
+  <text x="96" y="44" fill="#F7FAFF" font-family="Manrope, Inter, sans-serif" font-size="38" font-weight="800" letter-spacing="2.2">ACTIVE</text>
+  <text x="98" y="62" fill="#CBD5E1" font-family="ui-monospace, monospace" font-size="9" font-weight="500" letter-spacing="2.1">PERSONAL HEALTH &amp; ACTIVE LIFE</text>
+  <text x="98" y="79" fill="#94A3B8" font-family="'Noto Sans CJK SC', sans-serif" font-size="11">朱宝 · 运动与健康数字档案</text>
+</svg>
