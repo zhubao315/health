@@ -2437,14 +2437,21 @@ const renderCorrStats = () => {
       s.lo === null
         ? '样本不足'
         : `[${s.lo.toFixed(2)}, ${(s.hi ?? 0).toFixed(2)}]`;
+    // Rigor columns come from the server's single correlation engine.
+    // p/q are exploratory; a small-sample flag keeps weak rows honest.
+    const rho = server?.spearman_rho != null ? server.spearman_rho.toFixed(2) : '—';
+    const p = server?.p_value != null ? server.p_value.toFixed(3) : '—';
+    const q = server?.q_value_bh != null ? server.q_value_bh.toFixed(3) : '—';
+    const warn = server?.samples_ok === false ? ' ⚠' : '';
     return `<tr${key === state.corrKey ? ' class="active"' : ''}>
       <td>${def.label}</td><td class="num">${r}</td>
-      <td class="num">${s.n}</td><td class="num">${ci}</td>
+      <td class="num">${s.n}${warn}</td><td class="num">${ci}</td>
       <td class="num">${server?.r !== null && server?.r !== undefined ? server.r.toFixed(2) : '—'}</td>
+      <td class="num">${rho}</td><td class="num">${p}</td><td class="num">${q}</td>
     </tr>`;
   });
   document.getElementById('corr-stats').innerHTML = `
-    <thead><tr><th>关系（滞后 1 天）</th><th>r</th><th>样本 n</th><th>95% CI</th><th>后端 r*</th></tr></thead>
+    <thead><tr><th>关系（滞后 1 天）</th><th>r</th><th>样本 n</th><th>95% CI</th><th>后端 r*</th><th>ρ</th><th>p</th><th>q (BH)</th></tr></thead>
     <tbody>${rows.join('')}</tbody>`;
 };
 

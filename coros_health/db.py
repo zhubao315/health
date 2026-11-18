@@ -17,6 +17,8 @@ import math
 import sqlite3
 from pathlib import Path
 
+from . import stats_rigor
+
 TABLES = {
     "daily_health": [
         "date",
@@ -559,6 +561,11 @@ def _correlation(rows, label, x_key, y_key, lag=0):
     by_date = {r["date"]: r for r in rows}
     xs, ys = _pairs(rows, x_key, y_key, by_date, lag)
     r, n, lo, hi = pearson_with_ci(xs, ys)
+    # Rigor fields are additive: existing dashboard fields (r/n/ci) never
+    # change meaning, so older clients keep working.
+    clean = [(x, y) for x, y in zip(xs, ys) if x is not None and y is not None]
+    rho = stats_rigor.spearman([p[0] for p in clean], [p[1] for p in clean])
+    p_value = stats_rigor.two_sided_p(r, n)
     return {
         "label": label,
         "r": round(r, 3) if r is not None else None,
@@ -568,6 +575,9 @@ def _correlation(rows, label, x_key, y_key, lag=0):
         "lag": lag,
         "x_unit": _UNITS.get(x_key, ""),
         "y_unit": _UNITS.get(y_key, ""),
+        "spearman_rho": round(rho, 3) if rho is not None else None,
+        "p_value": round(p_value, 4) if p_value is not None else None,
+        "coverage": round(n / len(rows), 3) if rows else None,
     }
 
 
@@ -594,10 +604,12 @@ CORRELATION_SPECS = [
 
 
 def correlations(rows):
-    return [
+    results = [
         _correlation(rows, label, x_key, y_key, lag)
         for label, x_key, y_key, lag in CORRELATION_SPECS
     ]
+    # Family-wise correction must see all comparisons at once.
+    return stats_rigor.enrich(results)
 
 
 # --------------------------------------------------------------------------

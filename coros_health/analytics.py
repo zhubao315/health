@@ -228,6 +228,6 @@ METRIC_DEFINITIONS = {
     "sleep.deep_pct": "深睡分钟 / 主睡眠时长 ×100",
     "hrv.deviation": "夜间 HRV − 28 天个人基线（ms）",
     "rhr.weekly_trend": "7 天均值的（后半 − 前半）差，跨 28 天窗口（bpm）",
-    "correlations": "日期对齐滞后 Pearson r；样本不足 <8 或任一侧常数时 r=None",
+    "correlations": "探索性：日期对齐滞后 Pearson r + Fisher 95% CI + Spearman rho + 双侧 p；5 项比较统一做 Benjamini-Hochberg FDR 校正（q_value_bh）；n<30 标 samples_ok=false；仅相关，不作因果或医学判断",
     "anomaly_flags": "尾随 60 天滚动 MAD z>±3.5 判为异常节律（生理意义需人工核对）",
 }
