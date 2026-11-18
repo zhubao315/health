@@ -1,11 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="RUNNING">
-  <title>RUNNING — energy in motion</title>
-  <!-- standard linear runner (Lucide/Tabler style), 2px stroke, round ends -->
-  <g stroke="#D9F36A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="15.5" cy="4.5" r="1.6" fill="#D9F36A" stroke="none"/>
-    <path d="M13 8.5l-3.2 2-2.6-1"/>
-    <path d="M13 8.5l2.2 4 3.3 1.5 1.5 3"/>
-    <path d="M9.8 10.5 7 16l-3 2"/>
-    <path d="M13 8.5 11 15l-4 6"/>
+  <title>RUNNING — solid runner silhouette</title>
+  <!-- solid runner: round head + filled torso/limbs, reads as one bold block at small sizes -->
+  <g fill="#D9F36A" stroke="#D9F36A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="15.2" cy="4.6" r="2.2" stroke="none"/>
+    <!-- torso -->
+    <path d="M13.4 8.6 9.2 13.4"/>
+    <!-- arms -->
+    <path d="M13.4 9.2 17.6 7.4"/>
+    <path d="M12.4 10.4 8.4 11.6"/>
+    <!-- legs -->
+    <path d="M9.2 13.4 13.4 17.2 15 20.4"/>
+    <path d="M9.2 13.4 5 16 2.6 19.2"/>
   </g>
 </svg>

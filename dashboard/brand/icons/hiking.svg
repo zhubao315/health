@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="HIKING">
-  <title>HIKING — beyond the trail</title>
-  <!-- standard mountain with a trail -->
-  <g stroke="#34D399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 20 9 6l4 7 2.5-4L22 20Z"/>
-    <path d="M6.5 12.5 9 9l2 3.5" opacity="0.6"/>
-  </g>
+  <title>HIKING — solid mountain silhouette</title>
+  <!-- solid twin-peak mountain filled, with a contour notch cut out -->
+  <path d="M1.8 19.8 8.6 5.5l3.9 7.4 2.4-4.1 6.1 11Z" fill="#34D399"/>
+  <path d="M6.9 12.1 8.6 8.8l1.8 3.5-1.8-1.2Z" fill="#07111F"/>
 </svg>
