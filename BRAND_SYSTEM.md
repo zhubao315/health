@@ -53,20 +53,20 @@ ACTIVE WATCH                   OPERATIONS CONTROL CENTER
 
 ### 2.2 组合版本
 
-**所有 logo / icon 像素均来自 `assets/ACTIVE_Brand_Identity_Board.png` 的实际切图，由 `slice-board.py` 确定性裁切生成，不做任何矢量重绘或 AI 重新生成。** 白色/深 navy 卡片底色在切图时转为透明，保留徽记与图标的原始渐变像素。
+**所有 logo / icon 都是真 SVG 矢量**：从 `assets/ACTIVE_Brand_Identity_Board.png` 识别轮廓后用 Bézier 路径 + 原生 `linearGradient` 重建（`ACTIVE-BRAND-VECTOR/`），不嵌入位图、不放大 PNG。边缘在黑/白/深蓝/透明下均干净，可无限缩放。（早期 PNG 切片版 `slice-board.py` 已退役保留作参考。）
 
 | 文件 | 用途 |
 |---|---|
-| `assets/active-mark.png` | 主徽记切图（白底转透明），站点头部/页脚/Hero |
-| `assets/active-mark-tile.png` | 深蓝瓦片上的徽记切图 |
-| `assets/icon-health/running/cycling/hiking.png` | 四枚子品牌图标切图（白底转透明） |
-| `assets/watch-mark.png` | ACTIVE WATCH 四节点中枢切图 |
-| `assets/wordmark-dark.png` / `wordmark-light.png` | ACTIVE 字标切图（深底白字 / 浅底深字） |
-| `assets/lockup-dark.png` / `lockup-light.png` / `lockup-stacked.png` | 横向/纵向品牌组合切图 |
-| `assets/favicon.svg` | 包裹切片瓦片的 SVG（favicon 像素仍来自切图） |
-| `favicon-32/64.png` · `apple-touch-icon.png` · `icon-192/512.png` | 从品牌板 favicon 展示区切出并缩放，四站字节一致 |
+| `assets/active-mark.svg` | 主徽记矢量（三段 Path + 渐变），站点头部/页脚/Hero |
+| `assets/active-mark-mono.svg` / `active-logo-white.svg` | 单色 / 深底白字版本 |
+| `assets/active-logo.svg` / `active-logo-stacked.svg` / `active-wordmark.svg` | 横向 / 纵向 / 极简字标 |
+| `assets/icons/health.svg` · `running.svg` · `cycling.svg` · `hiking.svg` | 四枚子品牌矢量图标 |
+| `assets/watch-mark.svg` | ACTIVE WATCH 四节点中枢矢量 |
+| `assets/favicon.svg` | Favicon 矢量母版（Midnight 圆角瓦片 + A 矢量） |
+| `favicon-16/32/64.png` · `apple-touch-icon.png` · `icon-192/512.png` | 由 favicon.svg 矢量栅格化，四站字节一致 |
+| `ACTIVE-BRAND-VECTOR/png/*` | 1024/2048/4096 透明导出与深/浅底导出 |
 
-字标规格（切图原始排版）：**Manrope Variable ExtraBold 800**，字距 **2.2px**；英文副标 **Fira Code Medium 500**，字距 **2.1px**；中文辅助名「朱宝 · 运动与健康数字档案」。重塑资产时只需重跑 `python3 brand/slice-board.py`，不要手绘替代。
+字标规格：**Manrope Variable ExtraBold 800**，字距 **2.2px**；英文副标 **Fira Code Medium 500**，字距 **2.1px**；中文辅助名「朱宝 · 运动与健康数字档案」。矢量源在 `ACTIVE-BRAND-VECTOR/`，重建说明见 `BRAND_VECTOR_GUIDE.md`，验证图见 `ACTIVE-BRAND-VECTOR/validation/`。
 
 ### 2.3 使用规则
 
