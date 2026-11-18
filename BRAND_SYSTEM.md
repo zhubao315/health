@@ -44,26 +44,29 @@ ACTIVE WATCH                   OPERATIONS CONTROL CENTER
 
 现行标志为 **A 形轨迹徽记**：一条上升腿（青蓝 `#38BDF8 → #2563EB`）、一条下降腿（`#38BDF8 → #1D4ED8`）、一道运动弧线（`#22D3EE → #38BDF8`），合起来既是字母 A，也是「上升—测量—探索」的运动轨迹。
 
-- 唯一母图形文件：`assets/active-mark.svg`（64×64 渐变版）；单色版 `assets/active-mark-mono.svg` 用于内联与印刷。
+- 唯一母图形文件：`assets/active-mark.png`（品牌板白底卡片切图，白底转透明）；深蓝瓦片版为 `assets/active-mark-tile.png`。
 - 旧版 Z 形轨迹徽记 `zhubao-*.png` 作为历史资产保留随包分发，**不再用于四站界面**。
+- 手绘 SVG 母标（`active-mark.svg` 等）已退役，仅 favicon.svg 作为切片瓦片的 SVG 包装保留。
 - 禁止把母图形替换为字母 A 的标准字形、跑步人物、心电图、GitHub 头像或任何第三方标志。
 - 图形为装饰元素（`alt=""`、`aria-hidden="true"`），可访问名称由外层品牌链接的 `aria-label="ACTIVE"` 承担。
 - 悬停动效：`.brand:hover .brand-mark { transform: rotate(-3deg) scale(1.04); }`，缓动 `--active-ease-out`，0.35s；`prefers-reduced-motion` 下全局关闭。
 
 ### 2.2 组合版本
 
+**所有 logo / icon 像素均来自 `assets/ACTIVE_Brand_Identity_Board.png` 的实际切图，由 `slice-board.py` 确定性裁切生成，不做任何矢量重绘或 AI 重新生成。** 白色/深 navy 卡片底色在切图时转为透明，保留徽记与图标的原始渐变像素。
+
 | 文件 | 用途 |
 |---|---|
-| `assets/active-mark.svg` | 主徽记（站点头部/页脚、Hero、分享卡） |
-| `assets/active-mark-mono.svg` | 单色徽记（内联导航、印刷） |
-| `assets/active-logo.svg` | 横向组合：徽记 + ACTIVE + 英文副标 + 中文辅助名 |
-| `assets/active-logo-stacked.svg` | 纵向组合：头像、封面、Hero |
-| `assets/active-wordmark.svg` | 极简字标：窄屏导航、数据报告 |
-| `assets/favicon.svg` | Favicon 矢量母版（徽记置于 Midnight Canvas 圆角瓦片） |
-| `assets/watch-mark.svg` | ACTIVE WATCH 管理中枢图形 |
-| `favicon-32/64.png` · `apple-touch-icon.png` · `icon-192/512.png` | 由 `build-assets.mjs` 从 `favicon.svg` 生成，四站字节一致 |
+| `assets/active-mark.png` | 主徽记切图（白底转透明），站点头部/页脚/Hero |
+| `assets/active-mark-tile.png` | 深蓝瓦片上的徽记切图 |
+| `assets/icon-health/running/cycling/hiking.png` | 四枚子品牌图标切图（白底转透明） |
+| `assets/watch-mark.png` | ACTIVE WATCH 四节点中枢切图 |
+| `assets/wordmark-dark.png` / `wordmark-light.png` | ACTIVE 字标切图（深底白字 / 浅底深字） |
+| `assets/lockup-dark.png` / `lockup-light.png` / `lockup-stacked.png` | 横向/纵向品牌组合切图 |
+| `assets/favicon.svg` | 包裹切片瓦片的 SVG（favicon 像素仍来自切图） |
+| `favicon-32/64.png` · `apple-touch-icon.png` · `icon-192/512.png` | 从品牌板 favicon 展示区切出并缩放，四站字节一致 |
 
-字标规格：**Manrope Variable ExtraBold 800**，字距 **2.2px**；英文副标 **Fira Code Medium 500**，字距 **2.1px**；中文辅助名「朱宝 · 运动与健康数字档案」。
+字标规格（切图原始排版）：**Manrope Variable ExtraBold 800**，字距 **2.2px**；英文副标 **Fira Code Medium 500**，字距 **2.1px**；中文辅助名「朱宝 · 运动与健康数字档案」。重塑资产时只需重跑 `python3 brand/slice-board.py`，不要手绘替代。
 
 ### 2.3 使用规则
 
@@ -87,7 +90,7 @@ ACTIVE WATCH                   OPERATIONS CONTROL CENTER
 
 ## 4. ACTIVE WATCH 运营中枢
 
-ACTIVE WATCH 是品牌的技术支撑系统，**不是第五个子品牌**。标识：四节点（四站）+ 中央控制节点，精准连接线，运行成功状态使用 `#34D399`，结构线使用 `#94A3B8`，底色为 Deep Navy，文字为 Paper White。不发明第五种强调色。气质：ENGINEERING · MONITORING · RELIABILITY。图形文件：`assets/watch-mark.svg`。
+ACTIVE WATCH 是品牌的技术支撑系统，**不是第五个子品牌**。标识：四节点（四站）+ 中央控制节点，精准连接线，运行成功状态使用 `#34D399`，结构线使用 `#94A3B8`，底色为 Deep Navy，文字为 Paper White。不发明第五种强调色。气质：ENGINEERING · MONITORING · RELIABILITY。图形文件：`assets/watch-mark.png`（品牌板 ACTIVE WATCH 卡片切图，深蓝底转透明）。
 
 ## 5. 色彩（源自主站实测，不重新发明）
 

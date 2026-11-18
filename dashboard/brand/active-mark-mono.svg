@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="ACTIVE">
-  <title>ACTIVE — single colour mark</title>
-  <!-- Single-colour companion for inline navigation, favicons and print. -->
-  <path d="M10 54 33 7" stroke="currentColor" stroke-width="10" stroke-linecap="round" />
-  <path d="M33 7 55 52" stroke="currentColor" stroke-width="9" stroke-linecap="round" />
-  <path d="M13 43c10-8 26-8 39 4" stroke="currentColor" stroke-width="9" stroke-linecap="round" />
-</svg>
