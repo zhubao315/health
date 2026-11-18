@@ -1,15 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="RUNNING">
-  <title>RUNNING — solid runner silhouette</title>
-  <!-- solid runner: round head + filled torso/limbs, reads as one bold block at small sizes -->
-  <g fill="#D9F36A" stroke="#D9F36A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="15.2" cy="4.6" r="2.2" stroke="none"/>
-    <!-- torso -->
-    <path d="M13.4 8.6 9.2 13.4"/>
-    <!-- arms -->
-    <path d="M13.4 9.2 17.6 7.4"/>
-    <path d="M12.4 10.4 8.4 11.6"/>
-    <!-- legs -->
-    <path d="M9.2 13.4 13.4 17.2 15 20.4"/>
-    <path d="M9.2 13.4 5 16 2.6 19.2"/>
+  <title>RUNNING — Forward Motion</title>
+  <!-- Neo Sport Glyph: a forward-leaning abstract runner built from 4 bold
+       geometric strokes + a head facet. No stick figure, no anatomy. -->
+  <g stroke="#D9F36A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- head facet -->
+    <circle cx="15.2" cy="4.8" r="2" fill="#D9F36A" stroke="none"/>
+    <!-- one continuous forward-leaning body + arms -->
+    <path d="M13.4 8.6 9.8 12.6l3.8 0.4"/>
+    <!-- two legs in a stride, fused at the hip -->
+    <path d="M9.8 12.6 5.6 16.2 4 19"/>
+    <path d="M9.8 12.6 14 16.2 16.2 19.4"/>
   </g>
+  <!-- speed trail: two short parallel bars -->
+  <path d="M2.8 7h4" stroke="#A3B82F" stroke-width="2" stroke-linecap="round"/>
+  <path d="M2.2 10h2.8" stroke="#A3B82F" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
 </svg>
