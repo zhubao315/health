@@ -1,6 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="HIKING">
-  <title>HIKING — solid mountain silhouette</title>
-  <!-- solid twin-peak mountain filled, with a contour notch cut out -->
-  <path d="M1.8 19.8 8.6 5.5l3.9 7.4 2.4-4.1 6.1 11Z" fill="#34D399"/>
-  <path d="M6.9 12.1 8.6 8.8l1.8 3.5-1.8-1.2Z" fill="#07111F"/>
+  <title>HIKING — solid twin-peak silhouette</title>
+  <!-- solid twin-peak mountain: two summits + valley, with a transparent snow notch -->
+  <defs>
+    <mask id="snow">
+      <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+      <path d="M7.1 10 8.4 6.9 9.7 10 8.4 9.1Z" fill="#000"/>
+    </mask>
+  </defs>
+  <path d="M1.8 19.8 8.4 6.4 12.4 13.6 15.2 9.5 22.2 19.8Z"
+        fill="#34D399" mask="url(#snow)"/>
 </svg>
