@@ -27,6 +27,16 @@
   --active-brand-zh: '朱宝 · 运动与健康数字档案';
   --active-brand-en: 'PERSONAL HEALTH & ACTIVE LIFE';
   --active-owner: 'zhubao315';
+  /* v3.0 PRECISION MOTION identity */
+  --active-tagline: 'MOVE · MEASURE · EXPLORE';
+  --active-slogan: '用数据记录每一次前进。';
+  --active-wordmark-tracking: 2.2px; /* Manrope ExtraBold 800 */
+  --active-sub-tracking: 2.1px; /* Fira Code Medium 500 */
+  --active-mark-blue: #2563eb; /* the A's descending leg */
+  --active-mark-cyan: #38bdf8; /* the ascending leg */
+  --active-mark-arc: #22d3ee; /* the motion arc */
+  --active-watch-node: #34d399; /* healthy status only */
+  --active-watch-line: #94a3b8; /* control-centre connectors */
 
   /* --- surfaces (dark is the house style: the main site's canvas) ------- */
   --active-canvas: #07111f; /* 主站 --canvas */

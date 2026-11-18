@@ -1,9 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="ACTIVE">
-  <title>ACTIVE</title>
-  <!-- The trail: a single Z-shaped stroke. One continuous line that starts
-       high, crosses the frame and lands low — the shape of a route. -->
-  <path d="M7 9h18L7 23h18" stroke="currentColor" stroke-width="2.8"
-        stroke-linecap="round" stroke-linejoin="round" />
-  <!-- The node: the point on the trail where you are right now. -->
-  <circle cx="16" cy="16" r="2.4" fill="#fbbf24" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="ACTIVE">
+  <title>ACTIVE — PRECISION MOTION</title>
+  <!--
+    ACTIVE master mark (v3.0, 2026-11-18).
+    The A is built from one ascending leg, one descending leg and a motion
+    arc: movement, measurement and exploration in a single geometric gesture.
+    Gradient stops are the official brand blues, never a decorative rainbow.
+  -->
+  <defs>
+    <linearGradient id="active-leg" x1="10" y1="54" x2="34" y2="7" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" />
+      <stop offset="1" stop-color="#2563EB" />
+    </linearGradient>
+    <linearGradient id="active-desc" x1="34" y1="7" x2="55" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" />
+      <stop offset="1" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="active-arc" x1="13" y1="40" x2="54" y2="51" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE" />
+      <stop offset="1" stop-color="#38BDF8" />
+    </linearGradient>
+  </defs>
+  <path d="M10 54 33 7" stroke="url(#active-leg)" stroke-width="10" stroke-linecap="round" />
+  <path d="M33 7 55 52" stroke="url(#active-desc)" stroke-width="9" stroke-linecap="round" />
+  <path d="M13 43c10-8 26-8 39 4" stroke="url(#active-arc)" stroke-width="9" stroke-linecap="round" />
 </svg>

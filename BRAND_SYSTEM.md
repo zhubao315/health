@@ -3,164 +3,185 @@
 **母品牌：** ACTIVE · 朱宝 · 运动与健康数字档案
 **英文定位：** PERSONAL HEALTH & ACTIVE LIFE
 **品牌口号：** 用数据记录每一次前进。
-**适用范围：** HEALTH / RUNNING / CYCLING / HIKING 四个站点
-**规范版本：** 2.0（2026-11-13）——母品牌由「ZB ACTIVE」更名为 **ACTIVE**，色板与字体改为直接采用主站 https://zhubao315.github.io/ 的实测值。
+**理念：** MOVE · MEASURE · EXPLORE
+**气质：** PRECISION · ENERGY · DISCIPLINE · FREEDOM
+**适用范围：** HEALTH / RUNNING / CYCLING / HIKING 四个站点 + ACTIVE WATCH 运营中枢
+**规范版本：** 3.0（2026-11-18）——启用 **PRECISION MOTION**「A」形母品牌标志（蓝→青渐变），统一字标与四站图标；保留 2.0 已确定的正式色板、字体、网格与 70/30 结构。
 
-这份文件是四个仓库共同遵守的源文件。`brand-tokens.css` 与 `assets/` 下的矢量资源在四个仓库中保持逐字节一致，改动必须先改这里，再同步到各仓库（`./sync.sh`）。
+这份文件是五个仓库共同遵守的源文件。`brand-tokens.css` 与 `assets/` 下的矢量资源在四个站点仓库中保持逐字节一致，改动必须先改这里，再同步到各仓库（`./sync.sh`）。品牌验收断言见 `brand/brand-contract.mjs`：**ACTIVE 是唯一正确字标，ZB ACTIVE 必须不存在**。
 
 ---
 
 ## 1. 品牌结构
 
 ```
-ACTIVE
+ACTIVE                         MASTER BRAND
+MOVE · MEASURE · EXPLORE
 朱宝 · 运动与健康数字档案
 
-RUNNING · CYCLING · HIKING · HEALTH
+├── HEALTH     健康 · 恢复 · 身体状态      VITAL DATA      #38BDF8
+├── RUNNING    跑步 · 速度 · 耐力          ENERGY IN MOTION #D9F36A
+├── CYCLING    骑行 · 功率 · 远行          POWER & DISTANCE #FBBF24
+└── HIKING     徒步 · 山野 · 探索          BEYOND THE TRAIL #34D399
+
+ACTIVE WATCH                   OPERATIONS CONTROL CENTER
+四站巡检 · 数据同步 · 品牌资产 · 自动化管理
 ```
 
 | 层 | 内容 | 出现位置 |
 |---|---|---|
-| 母品牌 | ACTIVE 字标 + Z 形轨迹图形 | 顶部品牌区、页脚、Hero 眉标、社交预览图 |
-| 子品牌 | RUNNING / CYCLING / HIKING / HEALTH 图标 + 中文名 | 导航项、底部导航、页面眉标 |
-| 领域 | 跑步与耐力 / 骑行与远行 / 徒步与山野 / 身体与恢复 | 各站 Hero 副标与页脚说明 |
+| 母品牌 | **A 形渐变徽记** + ACTIVE 字标 + 副标 | 顶部品牌区、页脚、Hero 眉标、社交预览图、Favicon |
+| 子品牌 | HEALTH / RUNNING / CYCLING / HIKING 线性图标 + 中文名 | 导航项、底部导航、页面眉标 |
+| 中枢 | ACTIVE WATCH 四节点监控图形 | active-watch 运营文档与状态页 |
 
-导航顺序固定为：**跑步 → 骑行 → 徒步 → 健康**。顶部导航**不含 GitHub 或任何外部开发入口**，只保留四站导航与主题切换；GitHub 源码入口仅保留在页脚（低优先级开发者入口）。手机底栏保持四项，顺序与顶部一致。
+导航顺序固定为：**跑步 → 骑行 → 徒步 → 健康**。顶部导航**不含 GitHub 或任何外部开发入口**，只保留四站导航与主题切换；GitHub 源码入口仅保留在页脚。手机底栏保持四项，顺序与顶部一致。
 
-原则是 **70% 统一 + 30% 运动专属**；四个站点的数据口径与算法不属于品牌层，永不因视觉改动而变。
+原则是 **70% 统一 + 30% 运动专属**：统一母品牌图形、字标、深色底座、字体、网格与交互；差异只体现在子品牌图标、强调色和领域文案。四个站点的数据口径与算法不属于品牌层，永不因视觉改动而变。
 
-## 2. Logo
+## 2. 母品牌标志（PRECISION MOTION）
 
-### 2.1 图形
+### 2.1 核心图形
 
-**站点标志使用主站的朱宝轨迹徽记 `zhubao-symbol.png`**（业主决定，2026-11-13 第三轮）：四站与主站同一图形、同一文件（四仓内 md5 一致；源文件 592×530 RGBA，站内用等比优化版 ~6KB）。Z 形轨迹语言与主站 Z-GRID 同源。
+现行标志为 **A 形轨迹徽记**：一条上升腿（青蓝 `#38BDF8 → #2563EB`）、一条下降腿（`#38BDF8 → #1D4ED8`）、一道运动弧线（`#22D3EE → #38BDF8`），合起来既是字母 A，也是「上升—测量—探索」的运动轨迹。
 
-- 主站同款悬停动效：`.brand:hover .brand-mark { transform: rotate(-3deg) scale(1.04); }`，缓动 `--active-ease-out`（主站 `--ease-out`），0.35s；`prefers-reduced-motion` 下全局关闭。
-- 标志为装饰元素（`alt=""`），可访问名称由外层品牌链接的 `aria-label="ACTIVE"` 承担——与主站做法一致。
-- Z 矢量标志（`active-mark.svg` 等）降级为次级图形：仍用于 OG 分享图与图标瓦片；favicon 位图改用轨迹徽记本体（apple-touch-icon 垫 navy 底）。
-- 2026-11-16 起，站点标志的位图母版改为**严格切分版**：`zhubao-symbol-original.png`（从品牌板左侧大图按 (130,130)-(445,410) 直接裁切，零重绘/零改色），`zhubao-symbol.png` 只是它的等比优化副本。
-- 完整切图族（Panel A–I：符号、横向/纵向组合、单色、反白、字标、Favicon、深浅底应用示例）以 `zhubao-*.png` 随共享品牌包分发到四站；坐标与 SHA256 见 `zhubao-slices-manifest.json`，来源板见 `zhubao-source-board.png`。
+- 唯一母图形文件：`assets/active-mark.svg`（64×64 渐变版）；单色版 `assets/active-mark-mono.svg` 用于内联与印刷。
+- 旧版 Z 形轨迹徽记 `zhubao-*.png` 作为历史资产保留随包分发，**不再用于四站界面**。
+- 禁止把母图形替换为字母 A 的标准字形、跑步人物、心电图、GitHub 头像或任何第三方标志。
+- 图形为装饰元素（`alt=""`、`aria-hidden="true"`），可访问名称由外层品牌链接的 `aria-label="ACTIVE"` 承担。
+- 悬停动效：`.brand:hover .brand-mark { transform: rotate(-3deg) scale(1.04); }`，缓动 `--active-ease-out`，0.35s；`prefers-reduced-motion` 下全局关闭。
 
-### 2.2 版本
+### 2.2 组合版本
 
-| 文件 | 用途 | 说明 |
-|---|---|---|
-| `assets/zhubao-symbol.png` | **站点头部/页脚标志（现行）** | 主站朱宝轨迹徽记，四站同文件 |
-| `assets/active-mark.svg` | 独立图形 | `currentColor` + 固定金色节点 |
-| `assets/active-logo-light.svg` | 深色背景独立图形 | 纸白描边 `#f7faff` |
-| `assets/active-logo-dark.svg` | 浅色背景独立图形 | 海军蓝描边 `#0b1d33`，节点 `#d9a40a` |
-| `assets/favicon.svg` | 浏览器图标 / 书签 | 内嵌轨迹徽记（与主站 favicon 同思路） |
-| `favicon-32.png` / `favicon-64.png` / `apple-touch-icon.png` | 位图回退 | 每站生成，节点用本站强调色 |
+| 文件 | 用途 |
+|---|---|
+| `assets/active-mark.svg` | 主徽记（站点头部/页脚、Hero、分享卡） |
+| `assets/active-mark-mono.svg` | 单色徽记（内联导航、印刷） |
+| `assets/active-logo.svg` | 横向组合：徽记 + ACTIVE + 英文副标 + 中文辅助名 |
+| `assets/active-logo-stacked.svg` | 纵向组合：头像、封面、Hero |
+| `assets/active-wordmark.svg` | 极简字标：窄屏导航、数据报告 |
+| `assets/favicon.svg` | Favicon 矢量母版（徽记置于 Midnight Canvas 圆角瓦片） |
+| `assets/watch-mark.svg` | ACTIVE WATCH 管理中枢图形 |
+| `favicon-32/64.png` · `apple-touch-icon.png` · `icon-192/512.png` | 由 `build-assets.mjs` 从 `favicon.svg` 生成，四站字节一致 |
 
-字标使用 Manrope 800（字距 2.2px），副标使用 Fira Code 500（字距 2.1px）。站内 SVG 内联渲染，字体随页面加载。
+字标规格：**Manrope Variable ExtraBold 800**，字距 **2.2px**；英文副标 **Fira Code Medium 500**，字距 **2.1px**；中文辅助名「朱宝 · 运动与健康数字档案」。
 
 ### 2.3 使用规则
 
-- 图形最小 16px；顶部导航内 28px，页脚 30px，首屏 40px。
-- 个人 GitHub 头像**不作为**任何站点的品牌标识。
-- 四周留白不小于图形高度的 1/2。
-- 主站自身的头像字标（ZHUBAO）是个人字标，产品字标是 ACTIVE，两者不混用。
+- 图形最小 16px；顶部导航 28px，页脚 30px，首屏 40px；四周留白不小于图形高度的 1/2。
+- 深底用渐变版；浅底可继续使用渐变版，单色版仅用于明确需要继承文字色的场景。
+- 个人 GitHub 头像不作为任何站点的品牌标识。
+- 主站个人字标（ZHUBAO）与产品字标（ACTIVE）不混用。
 
 ## 3. 子品牌图标
 
-24×24 画布，2px 描边，圆角端点与折角，线性风格，不混用填充。
+统一 24×24 画布、2px 描边、圆角端点与折角、线性风格，不混用大面积填充、写实插画或阴影；默认继承文字色，仅当前页/激活态使用本站强调色。
 
-| 子品牌 | 图形 | 关键词 |
-|---|---|---|
-| RUNNING | 上扬的轨迹线 + 方向箭头 | 速度与节奏 |
-| CYCLING | 双轮 + 车架 | 机械与远行 |
-| HIKING | 双峰 + 等高线 | 地形与探索 |
-| HEALTH | 心率波形折线 | 身体与恢复 |
-
-图标与文字固定 0.5rem 间距；图标颜色继承文字色。
-
-## 4. 色彩（源自主站实测，不重新发明）
-
-主站 tokens 提取自 `zhubao315.github.io/_astro/BaseLayout.CQMzMhmP.css`。
-
-### 4.1 母品牌
-
-| 用途 | 色值 | 主站对应 |
-|---|---|---|
-| 深色底（canvas） | `#07111f` | `--canvas` |
-| 主卡片 | `#102A43` | （运动站现卡面，介于 navy 之间） |
-| 抬起表面 | `#13263D` | `--navy-3` |
-| 主要文字 | `#F7FAFF` | `--paper` |
-| 次要文字 | `#CBD5E1` | — |
-| 辅助文字 | `#94A3B8` | `--muted-light` |
-| 深色底边框 | `rgba(247,250,255,.16)` | `--line-dark` 家族 |
-| 浅色背景 | `#F7FAFF` | `--paper` |
-| 浅色卡片 | `#FFFFFF` | — |
-| 浅色正文 | `#101828` | `--ink` |
-| 浅色辅助文字 | `#667085` | `--muted` |
-| 浅色边框 | `rgba(16,24,40,.14)` | `--line` 家族 |
-| 链接蓝 | `#2563EB` / `#1D4ED8` | `--electric` / `--electric-ink` |
-| 成功 / 警告 / 危险 | `#34D399` / `#F59E0B` / `#F43F5E` | `--measure` / — / — |
-
-### 4.2 站点强调色
-
-| 站点 | Primary | Secondary | 与主站关系 |
+| 子品牌 | 图形 | 关键词 | 禁用 |
 |---|---|---|---|
-| HEALTH | `#38BDF8` | `#0EA5E9` | = `--build` |
-| CYCLING | `#FBBF24` | `#F59E0B` | = `--think` |
-| HIKING | `#34D399` | `#10B981` | = `--measure` |
-| RUNNING | `#D9F36A` | `#A3B82F` | **业主决定的例外**（主站绿仅 `#34d399`，与徒步保留区分度） |
+| HEALTH | 心率波形折线 | 生命数据、恢复、平衡 | 医疗十字架、医院/器械意象 |
+| RUNNING | 向右上方运动的轨迹线 + 箭头 | 速度、方向、耐力 | 卡通跑者、鞋剪影、人体肌肉 |
+| CYCLING | 双轮 + 精简车架（对称几何） | 机械、功率、远行 | 摩托/汽车、写实细节 |
+| HIKING | 双峰轮廓 + 等高线/路径 | 地形、自然、探索 | 风景画、旅游插画 |
 
-站点主题色只用于：本站品牌强调、激活态、重点数据、地图轨迹线、底部导航当前项、Hero 眉标。它**不是**通用图表色。
+图标须在 16 / 24 / 32 / 48 / 64px 下保持可识别；矢量源在 `assets/icons/`，组件源在 `sp-src/components/SportIcon.tsx`。
 
-### 4.3 健康指标语义色
+## 4. ACTIVE WATCH 运营中枢
 
-指标色与站点主题色解耦，语义固定：睡眠 `#6366F1` · HRV `#10B981` · 静息心率 `#F43F5E` · 压力 `#F59E0B` · 训练负荷 `#38BDF8`。
+ACTIVE WATCH 是品牌的技术支撑系统，**不是第五个子品牌**。标识：四节点（四站）+ 中央控制节点，精准连接线，运行成功状态使用 `#34D399`，结构线使用 `#94A3B8`，底色为 Deep Navy，文字为 Paper White。不发明第五种强调色。气质：ENGINEERING · MONITORING · RELIABILITY。图形文件：`assets/watch-mark.svg`。
 
-### 4.4 对比度（AA）
+## 5. 色彩（源自主站实测，不重新发明）
 
-`#F7FAFF`/`#07111F` ≈ 17:1 · `#94A3B8`/`#07111F` ≈ 7.0:1 · `#34D399`/`#07111F` ≈ 8.6:1 · `#D9F36A`/`#07111F` ≈ 13.4:1 · 浅色强调（`color-mix` 72% 加深）对 `#F7FAFF` ≥ 6.5:1。
+主站 tokens 提取自 `zhubao315.github.io/_astro/BaseLayout.CQMzMhmP.css`。深色为品牌默认环境，浅色是同一系统在纸面上的读法；不为任何站点重新设计母品牌底色，不用随机渐变取代正式色板，不用荧光色大面积填充。
 
-## 5. 字体与节奏
+### 5.1 母品牌色板
+
+| 色彩角色 | HEX | 用途 |
+|---|---|---|
+| Midnight Canvas | `#07111F` | 主背景 / Favicon 瓦片 |
+| Deep Navy | `#0B1D33` | 深色品牌空间 / WATCH 底 |
+| Active Surface | `#102A43` | 卡片背景 |
+| Raised Navy | `#13263D` | 浮层背景 |
+| Surface Hover | `#16324E` | 悬浮态 |
+| Paper White | `#F7FAFF` | 主文字 / 浅色背景 |
+| Soft Slate | `#CBD5E1` | 次级文字 |
+| Muted Steel | `#94A3B8` | 辅助文字 / 结构线 |
+| Muted Dark | `#64748B` | 更弱文字 |
+| Electric Blue | `#2563EB` | 链接和交互 / A 形徽记蓝 |
+| Link Blue Dark | `#1D4ED8` | 链接 hover |
+| Success / Warning / Danger | `#34D399` / `#F59E0B` / `#F43F5E` | 状态语义 |
+
+浅色主题：Light Canvas `#F7FAFF` · White Surface `#FFFFFF` · Light Surface 2 `#EEF2F7` · Light Surface 3 `#D9E1EC` · Ink `#101828` · Secondary Ink `#38495B` · Muted Ink `#667085`。
+
+### 5.2 站点强调色（保持正式配置）
+
+| 站点 | Primary | Secondary | 来源 |
+|---|---|---|---|
+| HEALTH | `#38BDF8` | `#0EA5E9` | 主站 `--build` |
+| RUNNING | `#D9F36A` | `#A3B82F` | 业主决定（与主站绿区分） |
+| CYCLING | `#FBBF24` | `#F59E0B` | 主站 `--think` |
+| HIKING | `#34D399` | `#10B981` | 主站 `--measure` |
+
+注意：跑步荧光青柠与徒步翡翠绿必须区分；健康蓝不能被其他站点强调色覆盖。
+
+### 5.3 健康指标语义色（不可替换）
+
+指标色与站点主题色解耦：睡眠 `#6366F1` · HRV `#10B981` · 静息心率 `#F43F5E` · 压力 `#F59E0B` · 训练负荷 `#38BDF8`。换 Logo 不改变任何指标的业务含义与颜色定义。
+
+### 5.4 对比度（AA）
+
+`#F7FAFF`/`#07111F` ≈ 17:1 · `#94A3B8`/`#07111F` ≈ 7.0:1 · `#34D399`/`#07111F` ≈ 8.6:1 · `#D9F36A`/`#07111F` ≈ 13.4:1 · 浅色强调对 `#F7FAFF` ≥ 6.5:1。
+
+## 6. 字体与节奏
 
 | 元素 | 规格 |
 |---|---|
 | 阅读字体 | **Inter Variable**（自托管 `/fonts/`，与主站一致） |
-| 展示字体 | **Manrope Variable**（自托管，用于品牌字标与大标题） |
+| 展示/字标 | **Manrope Variable ExtraBold 800**，字距 2.2px |
+| 英文副标 | **Fira Code Medium 500**，字距 2.1px |
 | 中文 | 系统 CJK 栈（Noto Sans CJK SC / PingFang SC…） |
-| 数字 / 时间 / 距离 / 配速 / 表格 | **Fira Code**，`font-variant-numeric: tabular-nums` |
+| 数字 / 时间 / 距离 / 配速 / 表格 | Fira Code，`tabular-nums` |
 | 页面主标题 | 32–44px（`clamp`） |
 | 模块标题 | 20–24px |
 | 正文 | 15px / 1.6 |
 | 小型数据标注 | 11–12px，字距 0.1em，大写 |
 | 卡片圆角 | 12px · 控件 8px |
 | 间距 | 4px 倍数 |
-| 动效缓动 | `cubic-bezier(.22,.72,.2,1)` / `cubic-bezier(.16,1,.3,1)`（主站 tokens） |
+| 动效缓动 | `cubic-bezier(.22,.72,.2,1)` / `cubic-bezier(.16,1,.3,1)` |
 
-Fira Sans 不再作为文本字体；Fira Code 保留为等宽数字字体。
+## 7. 布局骨架与组件
 
-## 6. 布局骨架（四站同一）
+内容宽度 `--active-shell: 1440px`；留白 `clamp(1rem,3vw,2rem)`；页头 64px（移动 56px）吸顶；页脚三段（品牌锁定 / 四站 + GitHub / 数据来源）；手机底栏 60px + `env(safe-area-inset-bottom)`；断点 1440/1024/768/390/360。
 
-| 项 | 值 |
-|---|---|
-| 内容宽度 | `--active-shell: 1440px`（`width: min(shell, 100% - 2*gutter)`） |
-| 左右留白 | `--active-gutter: clamp(1rem, 3vw, 2rem)` |
-| 页头高度 | `--active-header-h: 64px`（移动 `56px`），吸顶 |
-| 页脚 | 三段：品牌锁定 / 五链接导航（跑步·骑行·徒步·健康·GitHub，仅此处放源码入口）/ 数据来源一行 |
-| 手机底栏 | 四站图标 + 中文名，当前项用本站强调色，`env(safe-area-inset-bottom)`，内容区预留 `60px + 1.5rem` |
-| 断点 | 1440 / 1024 / 768 / 390 / 360 |
-
-## 7. 组件规范
-
-`BrandMark` · `BrandNav`（手机底栏）· `SportIcon` · Header · Footer · `SiteHero`/PageIntro · `SectionHeader` · `MetricCard` · ChartCard · MapCard · ActivityCard · DataTable · EmptyState / LoadingState / ErrorState（中文文案 + 重试按钮 + `aria-live`）· DataFreshness（数据截至）。运动组件与健康组件可各自实现，视觉规则必须一致。
+共享组件：`BrandMark` · `BrandNav` · `SportIcon` · Header · Footer · `SiteHero`/PageIntro · `SectionHeader` · `MetricCard` · ChartCard · MapCard · ActivityCard · DataTable · EmptyState / LoadingState / ErrorState（中文文案 + 重试 + `aria-live`）· DataFreshness。
 
 ## 8. 主题
 
-- 深色为默认；浅色是同一套设计在纸面（主站 `--paper`）上的读法。
-- 四站共用 `localStorage` 键 `zhubao315-theme`（同源），一站切换，其余跟随。
-- 站点强调色由各站 `site-metadata.ts` 的 `accent`/`accent2`（健康站为 CSS 变量）注入 `--accent-brand` / `--accent-2-brand`。
+深色为默认；浅色为同一套设计在纸面上的读法。四站共用 `localStorage` 键 `zhubao315-theme`。站点强调色由各站 `site-metadata.ts`（健康站为 CSS 变量）注入 `--accent-brand` / `--accent-2-brand`。
 
-## 9. 禁止事项
+## 9. Favicon 与应用展示
+
+四站使用**同一份** `favicon-32.png` / `favicon-64.png` / `apple-touch-icon.png` / `icon-192.png` / `icon-512.png`（由共享 `favicon.svg` 生成），线上字节一致由每日巡检校验。社交分享卡 `og-<site>.png` 使用本站强调色点缀，但主视觉统一为 A 形徽记 + ACTIVE 字标。展示场景：深色/浅色导航栏、移动顶栏、四站统一导航、Hero、数据报告封面、Favicon、社交卡、ACTIVE WATCH 状态页、品牌统一展示板。
+
+## 10. 禁止事项
 
 1. 不修改历史数据、同步逻辑、原始数据文件与统计口径。
 2. 不用站点主题色覆盖健康指标语义色。
 3. 不在视觉改造中替换真实指标为演示数字。
 4. 不删除地图、GPS 轨迹、3D 地形、日历、筛选与深度链接。
 5. 不在组件里硬编码颜色，只用 token。
-6. 不用 GitHub 头像充当站点品牌标识（现行标志为主站轨迹徽记 `zhubao-symbol.png`，业主决定）。
-7. 不出现「ZB ACTIVE」——母品牌自 2.0 起名为 **ACTIVE**（历史记录与提交信息除外）。
+6. 不用 GitHub 头像或旧 Z 形徽记充当现行站点品牌标识。
+7. 不出现「ZB ACTIVE」——母品牌自 2.0 起名为 **ACTIVE**。
+8. 不把 AI 生成的展示板直接当作正式矢量文件；正式文件以 `assets/*.svg` 为准。
+
+## 11. 文件与同步
+
+| 文件 | 职责 |
+|---|---|
+| `BRAND_SYSTEM.md` | 本规范 |
+| `brand-tokens.css` | 全站颜色/字体/几何 token |
+| `assets/*.svg` · `assets/*.png` | Logo、图标、字标、Favicon |
+| `build-assets.mjs` | 从 SVG 生成位图与社交卡 |
+| `sync.sh` | 将统一品牌资产同步到四站并刷新 `BRAND_MANIFEST.sha256` |
+| `sp-src/components/` | 共享 React 组件源 |
+
+每次改动后：`CHROME_PATH=… pnpm run assets:build` → `ACTIVE_ROOT=/oc bash brand/sync.sh` → 四站 Brand Guard 校验 → 提交 → 线上巡检验证。
