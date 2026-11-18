@@ -11,6 +11,7 @@
 [![Data](https://img.shields.io/badge/data-SQLite%20%2B%20CSV%20%2B%20gzip-22d3ee?style=flat-square)](https://github.com/zhubao315/health/tree/main/data)
 [![Last commit](https://img.shields.io/github/last-commit/zhubao315/health?style=flat-square)](https://github.com/zhubao315/health/commits)
 [![License](https://img.shields.io/github/license/zhubao315/health?style=flat-square)](https://github.com/zhubao315/health/blob/main/LICENSE)
+[![Release](https://img.shields.io/badge/release-v2.0.0-07111F?style=flat-square)](https://github.com/zhubao315/health/releases/tag/v2.0.0)
 
 [📊 在线面板](https://zhubao315.github.io/health/) · [🧠 分析指南](analysis/README.md) · [🔄 自动同步](#自动同步) · [🗂 数据字典](#数据字典) · [🔗 运动站点](#运动站点)
 
@@ -62,7 +63,7 @@
 - **概览**：KPI 卡片（单日 / 7 天均值 / 28 天基线三角定位 + 基线游标条 + 近 7 天微型趋势；偏离方向按指标语义着色，睡眠/HRV 偏低是警示、压力/静息心率偏低是放松）+ 近 6 周摘要 + 指标日历热力图（周一对齐，点击展开当天 ±3 天训练-睡眠-恢复上下文）
 - **日常恢复趋势**：睡眠结构（深/浅/REM/清醒 + 总时长线）、夜间 HRV、静息心率、压力、步数；每张图带 28 天滚动均值 ±1 SD 的基线走廊，悬停任一张即跨图同步十字准星并弹出当日快照（点击跳该日详情）
 - **训练与身体成分**：周训练量、短期/长期负荷、负荷比 ACWR（与负荷绝对量分开画）、近 90 天运动记录；好轻体脂秤的体重与体成分卡移到本段末尾，并标注「独立时间轴」——2018 年起按称重日记录，不受顶部窗口过滤
-- **相关性**：滞后相关散点（皮尔逊 r + Fisher 95 % CI + 有效对数 n + lag 切换）与后端 R* 的 ±0.03 口径核对；新增分位数对比（P25/P75 三档，比较 Y 的均值与中位数差，避免全局 r 掩盖阈值效应）；六周摘要与假设清单
+- **相关性**：探索性相关（Spearman ρ + 双侧 p + Benjamini-Hochberg FDR 校正 + n≥30 门槛 + Pearson r / Fisher 95 % CI / 有效对数 n / lag 切换）与后端 R* 的 ±0.03 口径核对；新增分位数对比（P25/P75 三档，比较 Y 的均值与中位数差，避免全局 r 掩盖阈值效应）；六周摘要与假设清单
 - **数据质量与原始记录**：11 个指标的缺失率、断档区间、可疑伪零、稳健异常值索引；完整逐日数据表（表头与日期列吸顶、HRVΔ 按 ±1.5 SD 与负荷比 >1.2 做条件着色）+ CSV 导出
 - 所有图表都由 `dashboard/data.json` 驱动，统计定义与 CSV/SQLite/`analysis/summary.md` 完全同源（`coros_health/db.py` + `coros_health/metrics.py`）
 
@@ -242,7 +243,7 @@ python -m coros_health.cli --incremental
 # 全量回填（首次）
 python -m coros_health.cli --start 2024-01-01
 
-# 跑测试（67 条：指标定义 / 存储 / 解析 / 质量审计）
+# 跑测试（92 条：指标定义 / 存储 / 解析 / 质量审计 / 统计严谨性）
 python -m unittest discover -s tests -q
 
 # 生成分析摘要
@@ -259,9 +260,9 @@ python -m http.server 8000 --directory dashboard
 四个站点属于同一套品牌视觉系统：同一个 ACTIVE 标志、四套子品牌图标、同一套配色令牌、同一套字体与布局骨架、同一套响应式规则与主题偏好键。运动站各自保留专业表达（跑步的速度与节奏、骑行的机械与流线、徒步的地形与海拔），健康站保持独立的数据驾驶舱实现，不迁框架。
 
 - 品牌规范：[BRAND_SYSTEM.md](BRAND_SYSTEM.md)
-- 设计令牌：[src/styles/brand-tokens.css](src/styles/brand-tokens.css)
-- 标志与图标：[public/brand/](public/brand/)
-- 社交预览图：[public/brand/og-*.png](public/brand/)
+- 设计令牌：[dashboard/brand-tokens.css](dashboard/brand-tokens.css)
+- 标志与图标：[dashboard/brand/](dashboard/brand/)
+- 社交预览图：[dashboard/brand/og-*.png](dashboard/brand/)
 
 ## 运动站点
 
@@ -278,3 +279,8 @@ Python 标准库 · COROS MCP（OAuth 2.0 + PKCE）· SQLite · Chart.js · GitH
 ## License
 
 MIT
+
+
+## 版本
+
+**ACTIVE 2.0.0**（tag `v2.0.0`，2026-11-18）—— 相关性统计严谨性、VITAL DATA 视觉、品牌 3.0 与统一图标、Impeccable / frontend-ui-engineering 复审修复。详见 [CHANGELOG.md](CHANGELOG.md) 与 [Release](https://github.com/zhubao315/health/releases/tag/v2.0.0)。
