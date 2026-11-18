@@ -301,6 +301,9 @@ a {
 
 /* cross-site jump (health → running / cycling / hiking) */
 .sport-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
   color: var(--accent);
   border-bottom: 1px dotted rgba(56, 189, 248, 0.5);
   white-space: nowrap;
@@ -889,6 +892,7 @@ h1 {
 }
 
 .tool {
+  min-height: 26px;
   padding: 0.24rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
@@ -1461,8 +1465,8 @@ select:hover {
 }
 
 .hcell {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 1px solid var(--overlay-6);
   border-radius: 5px;
@@ -2916,3 +2920,23 @@ main section[id] {
 /* Impeccable: balanced headings, readable paragraph rag. */
 h1,h2,h3,h4{text-wrap:balance;}
 p{text-wrap:pretty;}
+
+/* Skill fix: keep footer/nav links tappable on small screens. */
+@media (max-width: 768px) {
+  .footer-nav a {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer a,
+  .footer-nav a,
+  .mobile-nav a,
+  .nav a {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
