@@ -78,7 +78,7 @@
   --text: #f7faff;
   --text-strong: #f7faff;
   --muted: #94a3b8;
-  --subtle: #64748b;
+  --subtle: #8fa6bd;
 
   /* lines */
   --border: rgba(247, 250, 255, 0.16);
@@ -188,7 +188,7 @@
   --text: #101828;
   --text-strong: #101828;
   --muted: #5b6d80;
-  --subtle: #7b8b9c;
+  --subtle: #5c6b7c;
 
   --border: rgba(16, 24, 40, 0.14);
   --border-strong: rgba(16, 24, 40, 0.3);
@@ -394,7 +394,7 @@ a {
   border: 1px solid var(--border-strong);
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.08);
+  box-shadow: 0 1px 0 rgba(248, 250, 252, 0.06);
 }
 
 .dot {
@@ -402,12 +402,12 @@ a {
   height: 0.5rem;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+  box-shadow: none;
 }
 
 .dot.stale {
   background: var(--warn);
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
+  box-shadow: none;
 }
 
 .nav {
@@ -444,7 +444,7 @@ a {
 
 .nav a .nav-en {
   font-family: var(--font-mono);
-  font-size: 0.52rem;
+  font-size: 0.7rem;
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.1em;
@@ -549,7 +549,7 @@ a {
   background: var(--overlay-2);
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -628,7 +628,7 @@ a {
   background: linear-gradient(180deg, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.1));
   border-color: rgba(56, 189, 248, 0.32);
   font-weight: 600;
-  box-shadow: inset 0 1px 0 var(--overlay-12), 0 2px 10px -4px rgba(56, 189, 248, 0.6);
+  box-shadow: inset 0 1px 0 var(--overlay-12);
 }
 
 .section-nav {
@@ -1092,7 +1092,7 @@ select:hover {
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1124,7 +1124,7 @@ select:hover {
   margin-top: 0.3rem;
   color: var(--subtle);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1236,7 +1236,7 @@ select:hover {
   display: block;
   margin-top: 0.15rem;
   color: var(--subtle);
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   letter-spacing: 0.02em;
 }
 
@@ -1337,7 +1337,7 @@ select:hover {
 
 .tip-wd {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 .tip-badge {
@@ -1345,7 +1345,7 @@ select:hover {
   padding: 0.04rem 0.4rem;
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 0.63rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1379,7 +1379,7 @@ select:hover {
   height: 7px;
   border-radius: 50%;
   background: var(--c, var(--accent));
-  box-shadow: 0 0 8px var(--c, var(--accent));
+  box-shadow: none;
 }
 
 .tip-name {
@@ -1408,13 +1408,13 @@ select:hover {
 .tip-delta {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.67rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
 .tip-snapshot {
   color: var(--subtle);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -1438,7 +1438,7 @@ select:hover {
   margin-bottom: 0.25rem;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
 }
 
@@ -1452,7 +1452,7 @@ select:hover {
 .hweek {
   margin-bottom: 2px;
   color: var(--subtle);
-  font-size: 0.54rem;
+  font-size: 0.7rem;
   text-align: center;
 }
 
@@ -1466,10 +1466,10 @@ select:hover {
   padding: 0;
   border: 1px solid var(--overlay-6);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--accent) calc(var(--v, 0) * 88%), var(--cell-blend));
-  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--accent) calc(var(--v, 0) * 52%), var(--cell-blend));
+  color: var(--text);
   font-family: var(--font-mono);
-  font-size: 0.53rem;
+  font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   line-height: 18px;
   text-align: center;
@@ -1512,7 +1512,7 @@ select:hover {
   padding-top: 0.6rem;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 0.69rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1652,7 +1652,7 @@ select:hover {
   border-radius: 3px;
   background: rgba(56, 189, 248, 0.18);
   color: var(--accent-text);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
 }
 
 .ctx-sport {
@@ -1712,7 +1712,7 @@ select:hover {
 
 .bucket-head .hint {
   margin: 0;
-  font-size: 0.67rem;
+  font-size: 0.75rem;
 }
 
 .bucket-lead {
@@ -1756,7 +1756,7 @@ select:hover {
 
 .bucket-label small {
   display: block;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   opacity: 0.75;
 }
 
@@ -1781,13 +1781,13 @@ select:hover {
 }
 
 .bucket-bar i.b-mid {
-  background: linear-gradient(90deg, #0e7490, #38bdf8);
-  box-shadow: 0 0 14px -2px rgba(56, 189, 248, 0.6);
+  background: #38bdf8;
+  box-shadow: none;
 }
 
 .bucket-bar i.b-high {
-  background: linear-gradient(90deg, #047857, #10b981);
-  box-shadow: 0 0 14px -2px rgba(16, 185, 129, 0.55);
+  background: #10b981;
+  box-shadow: none;
 }
 
 .bucket-val {
@@ -1801,7 +1801,7 @@ select:hover {
 .bucket-val small {
   display: block;
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.7rem;
 }
 
 .bucket-table {
@@ -1858,7 +1858,7 @@ select:hover {
 .coverage th,
 .table-inline th {
   color: var(--subtle);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2046,7 +2046,7 @@ select:hover {
   margin-left: 0.2rem;
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0;
 }
 
@@ -2054,7 +2054,7 @@ select:hover {
   display: block;
   margin-top: 0.1rem;
   color: var(--subtle);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2069,7 +2069,7 @@ select:hover {
   border-radius: 3px;
   background: rgba(245, 158, 11, 0.16);
   color: var(--amber);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   letter-spacing: 0;
 }
 
@@ -2196,7 +2196,7 @@ select:hover {
 
 .xs-list dt {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 .xs-list dd {
@@ -2208,7 +2208,7 @@ select:hover {
 
 .xs-list em {
   color: var(--subtle);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-style: normal;
 }
 
@@ -2229,7 +2229,7 @@ select:hover {
 .xs-share-label {
   margin-top: 0.35rem;
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
 }
 
 .xs-block {
@@ -2249,7 +2249,7 @@ select:hover {
 .xs-year-table td em {
   display: block;
   color: var(--subtle);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-style: normal;
 }
 
@@ -2291,13 +2291,13 @@ select:hover {
 
 .xs-month > span {
   color: var(--muted);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   writing-mode: vertical-rl;
 }
 
 .xs-month em {
   color: var(--subtle);
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-style: normal;
 }
 
@@ -2323,13 +2323,13 @@ select:hover {
   border-radius: 5px;
   background: rgba(245, 158, 11, 0.14);
   color: var(--amber);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   letter-spacing: 0.02em;
 }
 
 .dir-basis {
   color: var(--subtle);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 .back-to-top {
@@ -2484,7 +2484,7 @@ main section[id] {
     width: 100%;
     height: auto;
     aspect-ratio: 1;
-    font-size: 0.62rem;
+    font-size: 0.7rem;
     line-height: 1;
   }
 
@@ -2641,7 +2641,7 @@ main section[id] {
 /* GitHub in the top bar reads like the sport sites: mono, muted, small. */
 .nav a.nav-plain {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.1em;
 }
 
@@ -2696,7 +2696,7 @@ main section[id] {
 .brand-site-en {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.52rem;
+  font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0.12em;
 }
@@ -2759,7 +2759,7 @@ main section[id] {
   margin: 0 0 0.35rem;
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -2912,3 +2912,7 @@ main section[id] {
     gap: 0.25rem 0.75rem;
   }
 }
+
+/* Impeccable: balanced headings, readable paragraph rag. */
+h1,h2,h3,h4{text-wrap:balance;}
+p{text-wrap:pretty;}
