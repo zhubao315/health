@@ -88,6 +88,8 @@ ACTIVE WATCH                   OPERATIONS CONTROL CENTER
 
 图标须在 16 / 24 / 32 / 48 / 64px 下保持可识别；矢量源在 `assets/icons/`，组件源在 `sp-src/components/SportIcon.tsx`。
 
+**当前版本：ZB ACTIVE Navigation Icon 1.0（Neo Sport Glyph）。** 四枚图标为统一设计语言的手工 SVG 几何图标（开放环+脉搏 / 前倾跑者+速度线 / 双轮+三角车架 / 双峰+登顶路径），非 Lucide/Emoji/火柴人；24×24 网格、2–2.6px 圆角描边、每枚一个品牌色、透明底、视觉重量一致。完整资产（base / mono / active）在 `ACTIVE-BRAND-VECTOR/sub-brands/`，规范见 `NAV_ICONS_GUIDE.md`。
+
 ## 4. ACTIVE WATCH 运营中枢
 
 ACTIVE WATCH 是品牌的技术支撑系统，**不是第五个子品牌**。标识：四节点（四站）+ 中央控制节点，精准连接线，运行成功状态使用 `#34D399`，结构线使用 `#94A3B8`，底色为 Deep Navy，文字为 Paper White。不发明第五种强调色。气质：ENGINEERING · MONITORING · RELIABILITY。图形文件：`assets/watch-mark.png`（品牌板 ACTIVE WATCH 卡片切图，深蓝底转透明）。

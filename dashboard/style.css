@@ -2940,3 +2940,21 @@ p{text-wrap:pretty;}
     align-items: center;
   }
 }
+
+/* Release marker (ACTIVE 2.0), aligned with the four sport sites. */
+.footer-release {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.footer-release-tag {
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
