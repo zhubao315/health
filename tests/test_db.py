@@ -15,8 +15,9 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from coros_health import db
+from coros_health import analytics, db
 
 _TABLES = (
     "daily_health",
@@ -463,6 +464,33 @@ class TestPearsonWithCI(unittest.TestCase):
         r, n, lo, hi = db.pearson_with_ci([1, 2, 3], [1, 2, 3])
         self.assertIsNone(r)
         self.assertEqual(n, 3)
+
+
+class TestDashboardPayloadIsReadOnly(DbFixture):
+    def test_payload_does_not_write_metrics_by_default(self):
+        """A fixture DB must never clobber the repo's analysis/metrics.json."""
+        real_build = analytics.build
+        seen = []
+
+        def spy(conn, write_metrics=True):
+            seen.append(write_metrics)
+            return real_build(conn, write_metrics=False)
+
+        with patch.object(analytics, "build", side_effect=spy):
+            db.dashboard_payload(db.connect(self.path))
+        self.assertEqual(seen, [False])
+
+    def test_explicit_opt_in_writes_metrics(self):
+        real_build = analytics.build
+        seen = []
+
+        def spy(conn, write_metrics=True):
+            seen.append(write_metrics)
+            return real_build(conn, write_metrics=False)
+
+        with patch.object(analytics, "build", side_effect=spy):
+            db.dashboard_payload(db.connect(self.path), write_metrics=True)
+        self.assertEqual(seen, [True])
 
 
 class TestCorrelationsAlignedByDate(DbFixture):

@@ -164,7 +164,7 @@ def main():
         db.export_csv(conn, table, str(DATA / f"{table}.csv"))
     db.export_csv(conn, "daily", str(DATA / "daily.csv"))
 
-    payload = db.dashboard_payload(conn)
+    payload = db.dashboard_payload(conn, write_metrics=True)
     DASHBOARD.mkdir(exist_ok=True)
     (DASHBOARD / "data.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":"))

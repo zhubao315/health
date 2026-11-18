@@ -125,7 +125,7 @@ def main():
     # Keep CSV exports and the dashboard consistent with the corrected RHR.
     db.export_csv(conn, "rhr", "data/rhr.csv")
     db.export_csv(conn, "daily", "data/daily.csv")
-    payload = db.dashboard_payload(conn)
+    payload = db.dashboard_payload(conn, write_metrics=True)
     Path("dashboard/data.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     )

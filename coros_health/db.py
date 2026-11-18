@@ -617,12 +617,17 @@ def correlations(rows):
 # --------------------------------------------------------------------------
 
 
-def dashboard_payload(conn):
+def dashboard_payload(conn, write_metrics=False):
     """Full dashboard payload.
 
     All rows carry:
     - stage minutes with a completeness ratio (missing stays null)
     - explicit nulls (never 0) for missing metric values
+
+    Read-only by default: callers that intentionally refresh the generated
+    analysis/metrics.json must pass write_metrics=True. Tests and ad-hoc
+    scripts can build a payload from a fixture DB without clobbering the
+    repository's generated artifact.
     """
     rows = [dict(r) for r in conn.execute("SELECT * FROM daily ORDER BY date")]
     rows = [decorate_row(row) for row in rows]
@@ -701,7 +706,7 @@ def dashboard_payload(conn):
         "training": training_weekly(conn),
         "daily": rows,
         "activities_recent": recent_activities(conn, 90),
-        **analytics_blocks(conn),
+        **analytics_blocks(conn, write_metrics=write_metrics),
     }
 
 
@@ -799,12 +804,12 @@ def recent_activities(conn, days=90):
     ]
 
 
-def analytics_blocks(conn):
+def analytics_blocks(conn, write_metrics=False):
     """Attach rolling series + insights (from analytics.build) without
     duplicating the daily rows."""
     from . import analytics
 
-    payload = analytics.build(conn, write_metrics=True)
+    payload = analytics.build(conn, write_metrics=write_metrics)
     return {"series": payload["series"], "insights": payload["insights"]}
 
 
