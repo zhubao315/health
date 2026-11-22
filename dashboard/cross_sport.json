@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-21T01:26:43+00:00",
+ "generated_at": "2026-11-22T00:18:09+00:00",
  "layer_version": 1,
  "schema": [
   "activity_id",
@@ -37,8 +37,8 @@
    "repo": "zhubao315/cycling",
    "branch": "main",
    "sport_type": "ride",
-   "records_raw": 7949,
-   "records_used": 7949,
+   "records_raw": 7951,
+   "records_used": 7951,
    "date_first": "2013",
    "date_last": "2026"
   },
@@ -63,12 +63,12 @@
    "hr_records": 622
   },
   "cycling": {
-   "count": 7949,
-   "distance_km": 49345.29,
-   "duration_h": 3404.1,
-   "elevation_gain_m": 154107,
-   "elevation_records": 4809,
-   "hr_records": 3313
+   "count": 7951,
+   "distance_km": 49363.9,
+   "duration_h": 3405.26,
+   "elevation_gain_m": 154140,
+   "elevation_records": 4811,
+   "hr_records": 3315
   },
   "hiking": {
    "count": 344,
@@ -534,12 +534,12 @@
      "hr_records": 123
     },
     "cycling": {
-     "count": 1052,
-     "distance_km": 6003.08,
-     "duration_h": 405.25,
-     "elevation_gain_m": 19960,
-     "elevation_records": 1048,
-     "hr_records": 1051
+     "count": 1054,
+     "distance_km": 6021.69,
+     "duration_h": 406.41,
+     "elevation_gain_m": 19993,
+     "elevation_records": 1050,
+     "hr_records": 1053
     },
     "hiking": {
      "count": 8,
@@ -551,9 +551,9 @@
     }
    },
    "totals": {
-    "count": 1183,
-    "duration_h": 614.64,
-    "elevation_gain_m": 26484
+    "count": 1185,
+    "duration_h": 615.8,
+    "elevation_gain_m": 26517
    }
   }
  ],
@@ -699,7 +699,7 @@
   {
    "month": "2026-11",
    "running": 8,
-   "cycling": 43,
+   "cycling": 45,
    "hiking": 0
   }
  ]
