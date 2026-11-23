@@ -1,18 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="CYCLING">
-  <title>CYCLING — Dual Wheel Motion</title>
-  <!-- Neo Sport Glyph: equal geometric wheels + a triangular frame with a
-       drive node; the frame leans for direction. No rider, no gears. -->
+  <title>CYCLING — Bicycle</title>
+  <!-- Figurative bicycle: two equal wheels, a triangular frame, handlebar and
+       saddle. A drive node marks the crank. 24x24 grid, round caps. -->
   <g stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="5" cy="16.5" r="3.7"/>
-    <circle cx="19" cy="16.5" r="3.7"/>
-    <!-- frame triangle: rear hub -> seat -> crank -> front hub -->
-    <path d="M5 16.5 9.6 9h4.2l5.2 7.5"/>
-    <path d="M9.6 9 13.8 16.5 5 16.5"/>
-    <path d="M13.8 16.5h5.2"/>
-    <!-- seat + handlebar facets -->
-    <path d="M8.4 8.8h2.6"/>
-    <path d="M13.4 8.2h2.8"/>
+    <circle cx="5.2" cy="16.4" r="3.6"/>
+    <circle cx="18.8" cy="16.4" r="3.6"/>
+    <path d="M5.2 16.4h6.6L9 10.4H5.2"/>
+    <path d="M9 10.4h6.6l3.2 6h-6.6"/>
+    <path d="M15.6 10.4 17 8.2h2.4"/>
+    <path d="M7.8 10.4h2.6"/>
   </g>
-  <!-- central drive node -->
-  <circle cx="13.8" cy="16.5" r="1.5" fill="#F59E0B" stroke="#FBBF24" stroke-width="0.8"/>
+  <circle cx="11.8" cy="16.4" r="1.4" fill="#F59E0B" stroke="none"/>
 </svg>

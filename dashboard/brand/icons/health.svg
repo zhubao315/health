@@ -1,15 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="HEALTH">
-  <title>HEALTH — Vital Rhythm</title>
-  <!-- Neo Sport Glyph: open geometric ring + vital pulse with a signal node.
-       24x24 grid, 2px round strokes, single brand colour, clean negative space. -->
-  <g stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <!-- open ring: circulation / recovery (two arcs with clear gaps) -->
-    <path d="M12 3.2a8.8 8.8 0 0 1 8.4 6.1"/>
-    <path d="M20.4 14.9A8.8 8.8 0 0 1 5.6 18.4"/>
-    <path d="M3.6 9.6A8.8 8.8 0 0 1 6.2 5.3"/>
-    <!-- vital pulse with a primary peak + secondary wave -->
-    <path d="M5.5 12h2.6l1.8-3.4 2.3 6.8 1.9-5 1.4 2.4h3"/>
-  </g>
-  <!-- signal node at the turning point -->
-  <circle cx="12.2" cy="15.4" r="1.15" fill="#0EA5E9" stroke="#38BDF8" stroke-width="0.8"/>
+  <title>HEALTH — Heartbeat</title>
+  <!-- Figurative heart with a vital pulse across it. 24x24 grid, round caps. -->
+  <path d="M12 21C12 21 3.5 15.5 3.5 9.7C3.5 6.8 5.7 4.8 8.4 4.8C10.1 4.8 11.4 5.7 12 6.8C12.6 5.7 13.9 4.8 15.6 4.8C18.3 4.8 20.5 6.8 20.5 9.7C20.5 15.5 12 21 12 21Z" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.4 11.8h2.4l1.4-2.6 2.2 5.2 1.4-2.6h3.8" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

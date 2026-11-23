@@ -81,14 +81,14 @@ ACTIVE WATCH                   OPERATIONS CONTROL CENTER
 
 | 子品牌 | 图形 | 关键词 | 禁用 |
 |---|---|---|---|
-| HEALTH | 心率波形折线 | 生命数据、恢复、平衡 | 医疗十字架、医院/器械意象 |
-| RUNNING | 向右上方运动的轨迹线 + 箭头 | 速度、方向、耐力 | 卡通跑者、鞋剪影、人体肌肉 |
-| CYCLING | 双轮 + 精简车架（对称几何） | 机械、功率、远行 | 摩托/汽车、写实细节 |
-| HIKING | 双峰轮廓 + 等高线/路径 | 地形、自然、探索 | 风景画、旅游插画 |
+| HEALTH | 心形 + 生命脉搏波 | 生命数据、恢复、平衡 | 医疗十字架、医院/器械意象 |
+| RUNNING | 几何化跑者轮廓（头/摆臂/跨步）+ 速度线 | 速度、方向、耐力 | 卡通/写实人体、鞋剪影、肌肉细节 |
+| CYCLING | 双轮 + 三角车架 + 车把 + 传动节点 | 机械、功率、远行 | 摩托/汽车、写实细节 |
+| HIKING | 双峰山形 + 登顶路径 | 地形、自然、探索 | 风景画、旅游插画 |
 
 图标须在 16 / 24 / 32 / 48 / 64px 下保持可识别；矢量源在 `assets/icons/`，组件源在 `sp-src/components/SportIcon.tsx`。
 
-**当前版本：ZB ACTIVE Navigation Icon 1.0（Neo Sport Glyph）。** 四枚图标为统一设计语言的手工 SVG 几何图标（开放环+脉搏 / 前倾跑者+速度线 / 双轮+三角车架 / 双峰+登顶路径），非 Lucide/Emoji/火柴人；24×24 网格、2–2.6px 圆角描边、每枚一个品牌色、透明底、视觉重量一致。完整资产（base / mono / active）在 `ACTIVE-BRAND-VECTOR/sub-brands/`，规范见 `NAV_ICONS_GUIDE.md`。
+**当前版本：ZB ACTIVE Navigation Icon 1.1（Figurative Sport Glyph）。** 四枚图标为统一设计语言的**具象几何**手工 SVG（心形+脉搏 / 跑者+速度线 / 双轮单车 / 双峰山形+路径），非位图描摹、非 Lucide/Emoji、非卡通或火柴人；24×24 网格、2–2.6px 圆角描边、每枚一个品牌色 + 辅助色、透明底、视觉重量一致。完整资产（base / mono / active）在 `ACTIVE-BRAND-VECTOR/sub-brands/`，规范见 `NAV_ICONS_GUIDE.md`。
 
 ## 4. ACTIVE WATCH 运营中枢
 
