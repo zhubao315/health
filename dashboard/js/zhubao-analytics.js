@@ -100,6 +100,26 @@
     return clean;
   }
 
+  // PostHog also stores initial/current URL and referrer fields we do not set.
+  // Redact every URL-like property recursively, not just the two we know about.
+  function looksLikeUrl(value) {
+    return typeof value === 'string' &&
+      (/^(https?:)?\/\//i.test(value) || /^\//.test(value) || value.indexOf('?') !== -1);
+  }
+
+  function redactUrls(value) {
+    if (!value || typeof value !== 'object') return value;
+    Object.keys(value).forEach(function (key) {
+      var item = value[key];
+      if (typeof item === 'string' && /(url|referrer|href)/i.test(key) && looksLikeUrl(item)) {
+        value[key] = sanitizeUrl(item);
+      } else if (item && typeof item === 'object') {
+        redactUrls(item);
+      }
+    });
+    return value;
+  }
+
   // Official PostHog JS snippet (US Cloud). Loads the SDK async via array.js.
   !function (t, e) {
     var o, n, p, r;
@@ -159,17 +179,9 @@
     logs: { captureConsoleLogs: false },
     before_send: function (event) {
       if (!event) return null;
-      if (event.properties) {
-        if (event.properties.$current_url) {
-          event.properties.$current_url = sanitizeUrl(event.properties.$current_url);
-        }
-        if (event.properties.$referrer) {
-          event.properties.$referrer = sanitizeUrl(event.properties.$referrer);
-        }
-        event.properties = scrub(event.properties);
-      }
-      if (event.$set) event.$set = scrub(event.$set);
-      if (event.$set_once) event.$set_once = scrub(event.$set_once);
+      if (event.properties) event.properties = scrub(redactUrls(event.properties));
+      if (event.$set) event.$set = scrub(redactUrls(event.$set));
+      if (event.$set_once) event.$set_once = scrub(redactUrls(event.$set_once));
       return event;
     }
   });
